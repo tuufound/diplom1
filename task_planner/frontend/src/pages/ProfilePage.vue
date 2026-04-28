@@ -10,10 +10,10 @@
             <h4 class="mb-1">{{ user?.username }}</h4>
             <p class="text-muted mb-3">{{ user?.email }}</p>
             <div class="d-flex justify-content-center gap-2">
-              <button class="btn btn-outline-primary btn-sm">
+              <button class="btn btn-outline-primary btn-sm" disabled>
                 <i class="fas fa-edit me-1"></i> Редактировать профиль
               </button>
-              <button class="btn btn-outline-danger btn-sm">
+              <button class="btn btn-outline-danger btn-sm" @click="logout">
                 <i class="fas fa-sign-out-alt me-1"></i> Выйти
               </button>
             </div>
@@ -112,41 +112,25 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import { useRouter } from 'vue-router'
+import api from '@/utils/api'
 
 export default {
   name: 'ProfilePage',
   setup() {
     const authStore = useAuthStore()
+    const router = useRouter()
 
     const user = computed(() => authStore.user)
 
     const stats = ref({
-      totalTasks: 15,
-      completedTasks: 8,
-      inProgressTasks: 4,
-      totalTime: '25ч 30м'
+      totalTasks: 0,
+      completedTasks: 0,
+      inProgressTasks: 0,
+      totalTime: '0м'
     })
 
-    const recentActivity = ref([
-      {
-        title: 'Задача "Проект X" выполнена',
-        description: 'Вы завершили работу над проектом X',
-        date: new Date().toISOString(),
-        type: 'task_completed'
-      },
-      {
-        title: 'Новая задача создана',
-        description: 'Вы создали новую задачу "Исследование"',
-        date: subDays(new Date(), 1).toISOString(),
-        type: 'task_created'
-      },
-      {
-        title: 'Таймер запущен',
-        description: 'Вы начали отслеживание времени для задачи "Дизайн"',
-        date: subDays(new Date(), 2).toISOString(),
-        type: 'time_started'
-      }
-    ])
+    const recentActivity = ref([])
 
     const darkMode = ref(false)
     const notificationsEnabled = ref(true)
@@ -179,16 +163,67 @@ export default {
       return format(parseISO(dateString), 'dd MMM yyyy, HH:mm', { locale: ru })
     }
 
-    // Mock function to subtract days
-    const subDays = (date, days) => {
-      const result = new Date(date)
-      result.setDate(result.getDate() - days)
-      return result
+    const logout = () => {
+      authStore.logout()
+      router.push('/login')
+    }
+
+    const parseDurationToSeconds = (durationString) => {
+      if (!durationString) return 0
+      const parts = durationString.split(':')
+      if (parts.length !== 3) return 0
+      return Number(parts[0]) * 3600 + Number(parts[1]) * 60 + Number(parts[2])
+    }
+
+    const formatTotalTime = (seconds) => {
+      const hours = Math.floor(seconds / 3600)
+      const minutes = Math.floor((seconds % 3600) / 60)
+      if (hours > 0) return `${hours}ч ${minutes}м`
+      return `${minutes}м`
+    }
+
+    const loadProfileData = async () => {
+      try {
+        const [tasksRes, timeRes] = await Promise.all([api.getTasks(), api.getTimeEntries()])
+        const tasks = tasksRes.data
+        const timeEntries = timeRes.data
+
+        const totalSeconds = timeEntries.reduce((sum, entry) => {
+          return sum + parseDurationToSeconds(entry.duration)
+        }, 0)
+
+        stats.value = {
+          totalTasks: tasks.length,
+          completedTasks: tasks.filter(task => task.status === 'done').length,
+          inProgressTasks: tasks.filter(task => task.status === 'in_progress').length,
+          totalTime: formatTotalTime(totalSeconds)
+        }
+
+        const taskActivity = tasks.slice(0, 5).map(task => ({
+          title: `Задача "${task.title}"`,
+          description: `Статус: ${getStatusText(task.status)}`,
+          date: task.updated_at || task.created_at,
+          type: task.status === 'done' ? 'task_completed' : 'task_updated'
+        }))
+
+        recentActivity.value = taskActivity
+      } catch (error) {
+        console.error('Error loading profile data:', error)
+      }
+    }
+
+    const getStatusText = (status) => {
+      const map = {
+        todo: 'К выполнению',
+        in_progress: 'В процессе',
+        done: 'Выполнено',
+        archived: 'В архиве'
+      }
+      return map[status] || status
     }
 
     onMounted(() => {
-      // Fetch real user stats and activity
-      console.log('Fetching user profile data...')
+      loadProfileData()
     })
 
     return {
@@ -198,6 +233,7 @@ export default {
       darkMode,
       notificationsEnabled,
       language,
+      logout,
       getActivityTypeText,
       getActivityBadgeClass,
       formatDate

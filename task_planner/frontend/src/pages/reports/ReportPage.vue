@@ -135,7 +135,7 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import api from '@/utils/api'
 import { useToast } from 'vue-toastification'
 import { Chart, registerables } from 'chart.js'
@@ -184,7 +184,14 @@ export default {
     }
 
     const filteredTasks = computed(() => {
-      return tasks.value // Add filtering logic based on date range
+      const start = startDate.value ? parseISO(`${startDate.value}T00:00:00`) : null
+      const end = endDate.value ? parseISO(`${endDate.value}T23:59:59`) : null
+
+      return tasks.value.filter(task => {
+        if (!start || !end) return true
+        const createdAt = parseISO(task.created_at)
+        return createdAt >= start && createdAt <= end
+      })
     })
 
     const getStatusText = (status) => {
@@ -277,7 +284,7 @@ export default {
         'archived': 0
       }
 
-      tasks.value.forEach(task => {
+      filteredTasks.value.forEach(task => {
         statusCounts[task.status]++
       })
 
@@ -315,7 +322,7 @@ export default {
                   const label = context.label || ''
                   const value = context.raw || 0
                   const total = context.dataset.data.reduce((a, b) => a + b, 0)
-                  const percentage = Math.round((value / total) * 100)
+                  const percentage = total ? Math.round((value / total) * 100) : 0
                   return `${label}: ${value} (${percentage}%)`
                 }
               }
@@ -326,7 +333,7 @@ export default {
 
       // Priority chart
       const priorityCounts = {}
-      tasks.value.forEach(task => {
+      filteredTasks.value.forEach(task => {
         if (task.priority) {
           const priorityName = task.priority.name
           priorityCounts[priorityName] = (priorityCounts[priorityName] || 0) + 1
@@ -362,7 +369,7 @@ export default {
       })
 
       // Time chart
-      const timeData = tasks.value.map(task => {
+      const timeData = filteredTasks.value.map(task => {
         return {
           task: task.title,
           time: getTaskTimeInMinutes(task)
@@ -415,10 +422,7 @@ export default {
       return Math.floor(totalSeconds / 60)
     }
 
-    const applyFilters = () => {
-      // Implement filter logic
-      console.log('Applying filters:', dateRange.value, startDate.value, endDate.value)
-    }
+    const applyFilters = () => updateCharts()
 
     const setDateRange = () => {
       const now = new Date()
@@ -438,12 +442,17 @@ export default {
           start = subYears(now, 1)
           break
         default:
-          start = subDays(now, 7)
+          return
       }
 
       startDate.value = format(start, 'yyyy-MM-dd')
       endDate.value = format(now, 'yyyy-MM-dd')
     }
+
+    watch(dateRange, () => {
+      setDateRange()
+      updateCharts()
+    })
 
     onMounted(() => {
       fetchData()

@@ -86,6 +86,7 @@ export default {
           username: form.value.username,
           password: form.value.password
         })
+        router.push('/tasks')
       } catch (error) {
         console.error('Login error:', error)
       } finally {

@@ -121,6 +121,7 @@ export default {
     const tasks = ref([])
     const categories = ref([])
     const priorities = ref([])
+    const timeEntries = ref([])
     const loading = ref(false)
 
     const filterStatus = ref('')
@@ -161,11 +162,20 @@ export default {
     const filteredTasks = computed(() => {
       return tasks.value.filter(task => {
         const statusMatch = !filterStatus.value || task.status === filterStatus.value
-        const priorityMatch = !filterPriority.value || task.priority?.id === filterPriority.value
-        const categoryMatch = !filterCategory.value || task.category?.id === filterCategory.value
+        const priorityMatch = !filterPriority.value || task.priority?.id === Number(filterPriority.value)
+        const categoryMatch = !filterCategory.value || task.category?.id === Number(filterCategory.value)
         return statusMatch && priorityMatch && categoryMatch
       })
     })
+
+    const fetchTimeEntries = async () => {
+      try {
+        const response = await api.getTimeEntries()
+        timeEntries.value = response.data
+      } catch (error) {
+        console.error('Error fetching time entries:', error)
+      }
+    }
 
     const resetFilters = () => {
       filterStatus.value = ''
@@ -198,11 +208,26 @@ export default {
       try {
         await api.startTimeEntry(taskId, { description: 'Автоматический запуск' })
         toast.success('Таймер запущен')
-        await fetchTasks()
+        await fetchTimeEntries()
       } catch (error) {
         toast.error('Ошибка запуска таймера')
         console.error('Error starting time tracking:', error)
       }
+    }
+
+    const stopTimeTracking = async (entryId) => {
+      try {
+        await api.stopTimeEntry(entryId)
+        toast.success('Таймер остановлен')
+        await fetchTimeEntries()
+      } catch (error) {
+        toast.error('Ошибка остановки таймера')
+        console.error('Error stopping time tracking:', error)
+      }
+    }
+
+    const getActiveEntry = (taskId) => {
+      return timeEntries.value.find(entry => entry.task?.id === taskId && !entry.end_time)
     }
 
     const getStatusText = (status) => {
@@ -236,36 +261,38 @@ export default {
     }
 
     const getTimeTrackingButtonClass = (task) => {
-      // Here you would check if there's an active time entry for this task
-      // For now, we'll just return a default class
-      return 'btn-outline-primary'
+      return getActiveEntry(task.id) ? 'btn-danger' : 'btn-outline-primary'
     }
 
     const getTimeTrackingIcon = (task) => {
-      // Here you would check if there's an active time entry for this task
-      return 'fa-play'
+      return getActiveEntry(task.id) ? 'fa-stop' : 'fa-play'
     }
 
     const getTimeTrackingText = (task) => {
-      // Here you would check if there's an active time entry for this task
-      return 'Запустить'
+      return getActiveEntry(task.id) ? 'Остановить' : 'Запустить'
     }
 
     const toggleTimeTracking = (task) => {
-      // Here you would toggle time tracking for the task
-      startTimeTracking(task.id)
+      const activeEntry = getActiveEntry(task.id)
+      if (activeEntry) {
+        stopTimeTracking(activeEntry.id)
+      } else {
+        startTimeTracking(task.id)
+      }
     }
 
     onMounted(() => {
       fetchTasks()
       fetchCategories()
       fetchPriorities()
+      fetchTimeEntries()
     })
 
     return {
       tasks,
       categories,
       priorities,
+      timeEntries,
       loading,
       filterStatus,
       filterPriority,

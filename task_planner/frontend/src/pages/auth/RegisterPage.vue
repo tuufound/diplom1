@@ -120,6 +120,7 @@ export default {
           email: form.value.email,
           password: form.value.password
         })
+        router.push('/login')
       } catch (error) {
         console.error('Registration error:', error)
       } finally {

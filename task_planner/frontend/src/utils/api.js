@@ -46,6 +46,9 @@ export default {
   register(data) {
     return api.post('/auth/register/', data)
   },
+  resetPassword(data) {
+    return api.post('/auth/reset-password/', data)
+  },
   getCurrentUser() {
     return api.get('/auth/user/')
   },

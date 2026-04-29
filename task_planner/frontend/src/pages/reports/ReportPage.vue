@@ -33,6 +33,16 @@
               <i class="fas fa-filter me-1"></i> Применить
             </button>
           </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <button class="btn btn-outline-success w-100" @click="exportCsv">
+              <i class="fas fa-file-csv me-1"></i> CSV
+            </button>
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <button class="btn btn-outline-danger w-100" @click="exportPdf">
+              <i class="fas fa-file-pdf me-1"></i> PDF
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -140,7 +150,8 @@ import api from '@/utils/api'
 import { useToast } from 'vue-toastification'
 import { Chart, registerables } from 'chart.js'
 import { format, subDays, subMonths, subQuarters, subYears, parseISO } from 'date-fns'
-import { ru } from 'date-fns/locale'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 Chart.register(...registerables)
 
@@ -424,6 +435,44 @@ export default {
 
     const applyFilters = () => updateCharts()
 
+    const getRowsForExport = () => {
+      return filteredTasks.value.map(task => ([
+        task.title,
+        getStatusText(task.status),
+        task.priority?.name || '-',
+        task.category?.name || '-',
+        getTaskTime(task)
+      ]))
+    }
+
+    const exportCsv = () => {
+      const header = ['Задача', 'Статус', 'Приоритет', 'Категория', 'Время']
+      const rows = getRowsForExport()
+      const csv = [header, ...rows]
+        .map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(','))
+        .join('\n')
+      const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `report-${startDate.value || 'all'}-${endDate.value || 'all'}.csv`
+      link.click()
+      URL.revokeObjectURL(url)
+    }
+
+    const exportPdf = () => {
+      const doc = new jsPDF()
+      doc.setFontSize(14)
+      doc.text('Отчет по задачам', 14, 16)
+      autoTable(doc, {
+        startY: 24,
+        head: [['Задача', 'Статус', 'Приоритет', 'Категория', 'Время']],
+        body: getRowsForExport(),
+        styles: { fontSize: 9 }
+      })
+      doc.save(`report-${startDate.value || 'all'}-${endDate.value || 'all'}.pdf`)
+    }
+
     const setDateRange = () => {
       const now = new Date()
       let start
@@ -471,6 +520,8 @@ export default {
       timeChart,
       filteredTasks,
       applyFilters,
+      exportCsv,
+      exportPdf,
       getStatusText,
       getStatusBadgeClass,
       getProgressBarClass,

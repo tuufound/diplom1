@@ -128,6 +128,38 @@
             </form>
           </div>
         </div>
+        <div class="card mt-4">
+          <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">Ручной ввод времени</h5>
+          </div>
+          <div class="card-body">
+            <form @submit.prevent="saveManualEntry">
+              <div class="mb-3">
+                <label class="form-label" for="manualTask">Задача</label>
+                <select id="manualTask" class="form-select" v-model="manualEntry.task" required>
+                  <option value="">Выберите задачу</option>
+                  <option v-for="task in tasks" :key="task.id" :value="task.id">{{ task.title }}</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="manualStart">Начало</label>
+                <input id="manualStart" type="datetime-local" class="form-control" v-model="manualEntry.start_time" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="manualEnd">Конец</label>
+                <input id="manualEnd" type="datetime-local" class="form-control" v-model="manualEntry.end_time" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="manualDescription">Описание</label>
+                <textarea id="manualDescription" class="form-control" rows="2" v-model="manualEntry.description"></textarea>
+              </div>
+              <button type="submit" class="btn btn-secondary w-100" :disabled="savingManual">
+                <span v-if="savingManual" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                Сохранить вручную
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -149,9 +181,16 @@ export default {
     const tasks = ref([])
     const loading = ref(false)
     const startingTimer = ref(false)
+    const savingManual = ref(false)
 
     const newTimer = ref({
       task: '',
+      description: ''
+    })
+    const manualEntry = ref({
+      task: '',
+      start_time: '',
+      end_time: '',
       description: ''
     })
 
@@ -223,9 +262,21 @@ export default {
       }
     }
 
-    const editTimeEntry = (entry) => {
-      // Implement edit functionality
-      console.log('Edit time entry:', entry)
+    const editTimeEntry = async (entry) => {
+      const newDescription = prompt('Изменить описание записи:', entry.description || '')
+      if (newDescription === null) return
+      try {
+        await api.updateTimeEntry(entry.id, {
+          task: entry.task.id,
+          start_time: entry.start_time,
+          end_time: entry.end_time,
+          description: newDescription
+        })
+        toast.success('Запись обновлена')
+        await fetchTimeEntries()
+      } catch (error) {
+        toast.error('Ошибка обновления записи')
+      }
     }
 
     const deleteTimeEntry = async (id) => {
@@ -278,6 +329,36 @@ export default {
       return text.length > length ? text.substring(0, length) + '...' : text
     }
 
+    const toIsoString = (localDateTime) => {
+      return localDateTime ? new Date(localDateTime).toISOString() : null
+    }
+
+    const saveManualEntry = async () => {
+      const start = new Date(manualEntry.value.start_time)
+      const end = new Date(manualEntry.value.end_time)
+      if (end <= start) {
+        toast.error('Время окончания должно быть позже времени начала')
+        return
+      }
+
+      try {
+        savingManual.value = true
+        await api.createTimeEntry({
+          task: Number(manualEntry.value.task),
+          start_time: toIsoString(manualEntry.value.start_time),
+          end_time: toIsoString(manualEntry.value.end_time),
+          description: manualEntry.value.description || ''
+        })
+        toast.success('Запись времени добавлена')
+        manualEntry.value = { task: '', start_time: '', end_time: '', description: '' }
+        await fetchTimeEntries()
+      } catch (error) {
+        toast.error('Ошибка ручного ввода времени')
+      } finally {
+        savingManual.value = false
+      }
+    }
+
     const updateTimerDisplay = () => {
       if (activeTimeEntry.value && activeTimeEntry.value.start_time) {
         const startTime = new Date(activeTimeEntry.value.start_time)
@@ -316,7 +397,9 @@ export default {
       tasks,
       loading,
       startingTimer,
+      savingManual,
       newTimer,
+      manualEntry,
       activeTimeEntry,
       formattedTime,
       startNewTimer,
@@ -326,7 +409,8 @@ export default {
       formatDate,
       formatDateTime,
       formatDuration,
-      truncateText
+      truncateText,
+      saveManualEntry
     }
   }
 }

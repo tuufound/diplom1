@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
 from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.utils import timezone
@@ -53,6 +54,33 @@ class CurrentUserView(APIView):
         return Response(UserSerializer(request.user).data)
 
 
+class PasswordResetView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        username = request.data.get("username", "").strip()
+        email = request.data.get("email", "").strip().lower()
+        new_password = request.data.get("new_password", "")
+
+        if not username or not email or not new_password:
+            return Response(
+                {"detail": "Укажите username, email и новый пароль."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = User.objects.get(username=username, email__iexact=email)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "Пользователь с такими данными не найден."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        user.set_password(new_password)
+        user.save(update_fields=["password"])
+        return Response({"detail": "Пароль успешно обновлен."})
+
+
 class CategoryListCreateView(generics.ListCreateAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
@@ -87,7 +115,8 @@ class TimeEntryListCreateView(generics.ListCreateAPIView):
         return TimeEntry.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        end_time = serializer.validated_data.get("end_time")
+        serializer.save(user=self.request.user, is_active=end_time is None)
 
 
 class TimeEntryRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):

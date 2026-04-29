@@ -3,9 +3,8 @@ import { ref, computed } from 'vue'
 import { useToast } from 'vue-toastification'
 import api from '@/utils/api'
 
-const toast = useToast()
-
 export const useAuthStore = defineStore('auth', () => {
+  const toast = useToast()
   const user = ref(null)
   const token = ref(localStorage.getItem('token') || null)
 
@@ -15,14 +14,12 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = userData
     token.value = authToken
     localStorage.setItem('token', authToken)
-    axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`
   }
 
   const clearAuth = () => {
     user.value = null
     token.value = null
     localStorage.removeItem('token')
-    delete axios.defaults.headers.common['Authorization']
   }
 
   const login = async (credentials) => {

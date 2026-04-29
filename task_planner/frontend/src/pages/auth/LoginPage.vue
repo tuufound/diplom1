@@ -54,6 +54,11 @@
               Зарегистрироваться
             </router-link>
           </p>
+          <p class="mb-0 mt-2">
+            <router-link to="/forgot-password" class="text-decoration-none">
+              Забыли пароль?
+            </router-link>
+          </p>
         </div>
       </form>
     </div>

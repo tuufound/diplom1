@@ -164,11 +164,17 @@ export default {
     const handleSubmit = async () => {
       try {
         loading.value = true
+        const payload = {
+          ...form.value,
+          priority: form.value.priority ? Number(form.value.priority) : null,
+          category: form.value.category ? Number(form.value.category) : null,
+          due_date: form.value.due_date ? new Date(form.value.due_date).toISOString() : null
+        }
         if (isEditing.value) {
-          await api.updateTask(route.params.id, form.value)
+          await api.updateTask(route.params.id, payload)
           toast.success('Задача успешно обновлена')
         } else {
-          await api.createTask(form.value)
+          await api.createTask(payload)
           toast.success('Задача успешно создана')
         }
         router.push('/tasks')

@@ -20,6 +20,12 @@ const routes = [
     meta: { requiresGuest: true }
   },
   {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('@/pages/auth/ForgotPasswordPage.vue'),
+    meta: { requiresGuest: true }
+  },
+  {
     path: '/tasks',
     name: 'Tasks',
     component: () => import('@/pages/tasks/TaskListPage.vue'),

@@ -11,6 +11,9 @@
 
     <div class="card mb-4">
       <div class="card-body">
+        <div v-if="dueSoonTasks.length" class="alert alert-warning">
+          <strong>Напоминания:</strong> скоро дедлайн у {{ dueSoonTasks.length }} задач.
+        </div>
         <div class="d-flex flex-wrap gap-3 mb-3">
           <select v-model="filterStatus" class="form-select" style="width: 200px;">
             <option value="">Все статусы</option>
@@ -167,6 +170,15 @@ export default {
         return statusMatch && priorityMatch && categoryMatch
       })
     })
+    const dueSoonTasks = computed(() => {
+      const now = new Date()
+      const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000)
+      return tasks.value.filter(task => {
+        if (!task.due_date || task.status === 'done' || task.status === 'archived') return false
+        const due = new Date(task.due_date)
+        return due >= now && due <= in48h
+      })
+    })
 
     const fetchTimeEntries = async () => {
       try {
@@ -298,6 +310,7 @@ export default {
       filterPriority,
       filterCategory,
       filteredTasks,
+      dueSoonTasks,
       resetFilters,
       goToTaskDetail,
       editTask,

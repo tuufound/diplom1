@@ -1,109 +1,83 @@
 <template>
-  <div class="tasks-container page-shell">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2 class="page-title">
-        <i class="fas fa-tasks me-2"></i>Мои задачи
-      </h2>
-      <router-link to="/tasks/create" class="btn btn-primary">
-        <i class="fas fa-plus me-1"></i> Создать задачу
-      </router-link>
-    </div>
-
-    <div class="card mb-4 filter-shell">
-      <div class="card-body">
-        <div v-if="dueSoonTasks.length" class="alert alert-warning">
-          <strong>Напоминания:</strong> скоро дедлайн у {{ dueSoonTasks.length }} задач.
+  <div class="focus-layout page-shell">
+    <aside class="focus-sidebar">
+      <div class="calendar-card">
+        <div class="calendar-head">
+          <button class="icon-btn" type="button"><i class="fas fa-chevron-left"></i></button>
+          <strong>{{ monthLabel }}</strong>
+          <button class="icon-btn" type="button"><i class="fas fa-chevron-right"></i></button>
         </div>
-        <div class="filters-grid mb-3">
-          <select v-model="filterStatus" class="form-select">
-            <option value="">Все статусы</option>
-            <option value="todo">To Do</option>
-            <option value="in_progress">In Progress</option>
-            <option value="done">Done</option>
-            <option value="archived">Archived</option>
-          </select>
-
-          <select v-model="filterPriority" class="form-select">
-            <option value="">Все приоритеты</option>
-            <option v-for="priority in priorities" :key="priority.id" :value="priority.id">
-              {{ priority.name }}
-            </option>
-          </select>
-
-          <select v-model="filterCategory" class="form-select">
-            <option value="">Все категории</option>
-            <option v-for="category in categories" :key="category.id" :value="category.id">
-              {{ category.name }}
-            </option>
-          </select>
-
-          <button class="btn btn-outline-secondary reset-btn" @click="resetFilters">
-            <i class="fas fa-redo me-1"></i> Сбросить
+        <div class="weekdays">
+          <span v-for="wd in weekDays" :key="wd">{{ wd }}</span>
+        </div>
+        <div class="days-grid">
+          <button
+            v-for="day in calendarDays"
+            :key="day.toISOString()"
+            class="day-cell"
+            :class="{ muted: !isCurrentMonth(day), today: isToday(day) }"
+            type="button"
+          >
+            {{ format(day, 'd') }}
           </button>
         </div>
       </div>
-    </div>
 
-    <div v-if="loading" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Загрузка...</span>
+      <nav class="sections-card">
+        <button class="section-item active"><i class="fas fa-bookmark"></i> В фокусе</button>
+        <button class="section-item"><i class="fas fa-play"></i> В работе <span>{{ activeTasksCount }}</span></button>
+        <button class="section-item"><i class="fas fa-calendar-day"></i> Сегодня <span>{{ todayTasksCount }}</span></button>
+        <button class="section-item"><i class="fas fa-clock"></i> Просрочено <span>{{ overdueTasksCount }}</span></button>
+      </nav>
+    </aside>
+
+    <section class="focus-content">
+      <div class="content-head">
+        <h2 class="page-title"><i class="fas fa-list me-2"></i>В фокусе</h2>
       </div>
-    </div>
 
-    <div v-else>
-      <div v-if="filteredTasks.length === 0" class="text-center py-5">
-        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-        <h4>Задач не найдено</h4>
-        <p class="text-muted">Создайте новую задачу, нажав кнопку выше</p>
+      <router-link to="/tasks/create" class="add-task-row">
+        <i class="fas fa-plus"></i>
+        Добавить задачу
+      </router-link>
+
+      <div v-if="filteredTasks.length === 0" class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <p>Задачи не найдены</p>
       </div>
 
-      <div v-else class="row g-3">
-        <div v-for="task in filteredTasks" :key="task.id" class="col-md-6 col-lg-4">
-          <div class="card task-card h-100" @click="goToTaskDetail(task.id)">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <span class="badge" :class="getStatusBadgeClass(task.status)">
-                {{ getStatusText(task.status) }}
-              </span>
-              <div class="dropdown">
-                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
-                  <i class="fas fa-ellipsis-v"></i>
-                </button>
-                <ul class="dropdown-menu">
-                  <li><a class="dropdown-item" href="#" @click.stop="startTimeTracking(task.id)">Запустить таймер</a></li>
-                  <li><a class="dropdown-item" href="#" @click.stop="editTask(task.id)">Редактировать</a></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item text-danger" href="#" @click.stop="deleteTask(task.id)">Удалить</a></li>
-                </ul>
-              </div>
-            </div>
-            <div class="card-body">
-              <h5 class="card-title">{{ task.title }}</h5>
-              <p class="card-text text-muted mb-3">{{ truncateText(task.description, 100) }}</p>
-              <div class="d-flex flex-wrap gap-2 mb-3">
-                <span v-if="task.priority" class="badge bg-warning text-dark">
-                  <i class="fas fa-exclamation-circle me-1"></i> {{ task.priority.name }}
-                </span>
-                <span v-if="task.category" class="badge bg-info">
-                  <i class="fas fa-folder me-1"></i> {{ task.category.name }}
-                </span>
-                <span v-if="task.due_date" class="badge bg-secondary">
-                  <i class="fas fa-calendar me-1"></i> {{ formatDate(task.due_date) }}
-                </span>
-              </div>
-            </div>
-            <div class="card-footer d-flex justify-content-between align-items-center">
-              <small class="text-muted">
-                <i class="fas fa-clock me-1"></i> {{ formatDate(task.created_at) }}
-              </small>
-              <button class="btn btn-sm" :class="getTimeTrackingButtonClass(task)" @click.stop="toggleTimeTracking(task)">
-                <i class="fas" :class="getTimeTrackingIcon(task)"></i>
-                {{ getTimeTrackingText(task) }}
-              </button>
+      <div v-else class="task-rows">
+        <article
+          v-for="task in filteredTasks"
+          :key="task.id"
+          class="task-row"
+          :class="getRowClass(task)"
+          @click="goToTaskDetail(task.id)"
+        >
+          <div class="task-main">
+            <h6 class="task-title">{{ task.title }}</h6>
+            <p class="task-sub">{{ truncateText(task.description, 90) }}</p>
+            <div class="chips">
+              <span class="chip muted"><i class="far fa-calendar-alt"></i> {{ formatDate(task.created_at) }}</span>
+              <span v-if="task.project" class="chip"><i class="fas fa-briefcase"></i> {{ task.project.name }}</span>
+              <span v-if="task.category" class="chip"><i class="far fa-folder"></i> {{ task.category.name }}</span>
+              <span v-if="task.priority" class="chip danger"><i class="fas fa-flag"></i> {{ task.priority.name }}</span>
             </div>
           </div>
-        </div>
+          <div class="task-actions">
+            <button class="icon-btn" @click.stop="toggleTimeTracking(task)" :disabled="!task.can_edit">
+              <i class="fas" :class="getTimeTrackingIcon(task)"></i>
+            </button>
+            <button class="icon-btn" @click.stop="editTask(task.id)" :disabled="!task.can_edit">
+              <i class="fas fa-pen"></i>
+            </button>
+            <button class="icon-btn danger" @click.stop="deleteTask(task.id)" :disabled="!task.can_edit">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </article>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
@@ -112,7 +86,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/utils/api'
 import { useToast } from 'vue-toastification'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth, startOfWeek, addDays, isSameMonth, isSameDay } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
 export default {
@@ -126,10 +100,8 @@ export default {
     const priorities = ref([])
     const timeEntries = ref([])
     const loading = ref(false)
-
-    const filterStatus = ref('')
-    const filterPriority = ref('')
-    const filterCategory = ref('')
+    const currentDate = ref(new Date())
+    const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
     const fetchTasks = async () => {
       try {
@@ -162,23 +134,24 @@ export default {
       }
     }
 
-    const filteredTasks = computed(() => {
-      return tasks.value.filter(task => {
-        const statusMatch = !filterStatus.value || task.status === filterStatus.value
-        const priorityMatch = !filterPriority.value || task.priority?.id === Number(filterPriority.value)
-        const categoryMatch = !filterCategory.value || task.category?.id === Number(filterCategory.value)
-        return statusMatch && priorityMatch && categoryMatch
-      })
+    const filteredTasks = computed(() => tasks.value)
+    const monthLabel = computed(() => format(currentDate.value, 'LLLL yyyy', { locale: ru }))
+    const calendarDays = computed(() => {
+      const startMonth = startOfMonth(currentDate.value)
+      const endMonth = endOfMonth(currentDate.value)
+      const startDate = startOfWeek(startMonth, { weekStartsOn: 1 })
+      const days = []
+      let day = startDate
+      while (days.length < 42) {
+        days.push(day)
+        if (day > endMonth && days.length >= 35) break
+        day = addDays(day, 1)
+      }
+      return days
     })
-    const dueSoonTasks = computed(() => {
-      const now = new Date()
-      const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000)
-      return tasks.value.filter(task => {
-        if (!task.due_date || task.status === 'done' || task.status === 'archived') return false
-        const due = new Date(task.due_date)
-        return due >= now && due <= in48h
-      })
-    })
+    const activeTasksCount = computed(() => tasks.value.filter(t => t.status === 'in_progress' || t.status === 'todo').length)
+    const todayTasksCount = computed(() => tasks.value.filter(t => t.due_date && isSameDay(new Date(t.due_date), new Date())).length)
+    const overdueTasksCount = computed(() => tasks.value.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done').length)
 
     const fetchTimeEntries = async () => {
       try {
@@ -189,22 +162,26 @@ export default {
       }
     }
 
-    const resetFilters = () => {
-      filterStatus.value = ''
-      filterPriority.value = ''
-      filterCategory.value = ''
-    }
-
     const goToTaskDetail = (taskId) => {
       router.push(`/tasks/${taskId}/edit`)
     }
 
     const editTask = (taskId) => {
+      const task = tasks.value.find(item => item.id === taskId)
+      if (task && !task.can_edit) {
+        toast.error('Режим просмотра: редактирование недоступно')
+        return
+      }
       router.push(`/tasks/${taskId}/edit`)
     }
 
     const deleteTask = async (taskId) => {
       if (confirm('Вы уверены, что хотите удалить эту задачу?')) {
+        const task = tasks.value.find(item => item.id === taskId)
+        if (task && !task.can_edit) {
+          toast.error('Режим просмотра: удаление недоступно')
+          return
+        }
         try {
           await api.deleteTask(taskId)
           toast.success('Задача успешно удалена')
@@ -217,6 +194,11 @@ export default {
     }
 
     const startTimeTracking = async (taskId) => {
+      const task = tasks.value.find(item => item.id === taskId)
+      if (task && !task.can_edit) {
+        toast.error('Режим просмотра: запуск таймера недоступен')
+        return
+      }
       try {
         await api.startTimeEntry(taskId, { description: 'Автоматический запуск' })
         toast.success('Таймер запущен')
@@ -254,12 +236,12 @@ export default {
 
     const getStatusBadgeClass = (status) => {
       const statusMap = {
-        'todo': 'bg-secondary',
-        'in_progress': 'bg-primary',
-        'done': 'bg-success',
-        'archived': 'bg-dark'
+        'todo': 'soft-blue',
+        'in_progress': 'soft-purple',
+        'done': 'soft-green',
+        'archived': 'soft-gray'
       }
-      return statusMap[status] || 'bg-secondary'
+      return statusMap[status] || 'soft-blue'
     }
 
     const formatDate = (dateString) => {
@@ -272,16 +254,18 @@ export default {
       return text.length > length ? text.substring(0, length) + '...' : text
     }
 
-    const getTimeTrackingButtonClass = (task) => {
-      return getActiveEntry(task.id) ? 'btn-danger' : 'btn-outline-primary'
-    }
-
     const getTimeTrackingIcon = (task) => {
       return getActiveEntry(task.id) ? 'fa-stop' : 'fa-play'
     }
 
-    const getTimeTrackingText = (task) => {
-      return getActiveEntry(task.id) ? 'Остановить' : 'Запустить'
+    const getRowClass = (task) => {
+      const map = {
+        todo: 'row-todo',
+        in_progress: 'row-progress',
+        done: 'row-done',
+        archived: 'row-archived'
+      }
+      return map[task.status] || 'row-todo'
     }
 
     const toggleTimeTracking = (task) => {
@@ -292,6 +276,9 @@ export default {
         startTimeTracking(task.id)
       }
     }
+
+    const isCurrentMonth = (day) => isSameMonth(day, currentDate.value)
+    const isToday = (day) => isSameDay(day, new Date())
 
     onMounted(() => {
       fetchTasks()
@@ -306,12 +293,13 @@ export default {
       priorities,
       timeEntries,
       loading,
-      filterStatus,
-      filterPriority,
-      filterCategory,
       filteredTasks,
-      dueSoonTasks,
-      resetFilters,
+      monthLabel,
+      weekDays,
+      calendarDays,
+      activeTasksCount,
+      todayTasksCount,
+      overdueTasksCount,
       goToTaskDetail,
       editTask,
       deleteTask,
@@ -320,81 +308,211 @@ export default {
       getStatusBadgeClass,
       formatDate,
       truncateText,
-      getTimeTrackingButtonClass,
       getTimeTrackingIcon,
-      getTimeTrackingText,
-      toggleTimeTracking
+      toggleTimeTracking,
+      getRowClass,
+      isCurrentMonth,
+      isToday,
+      format
     }
   }
 }
 </script>
 
 <style scoped>
-.tasks-container {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.filter-shell {
-  border-radius: 18px;
-}
-
-.filters-grid {
+.focus-layout {
   display: grid;
-  grid-template-columns: repeat(3, minmax(180px, 1fr)) auto;
+  grid-template-columns: 260px 1fr;
+  gap: 16px;
+  min-height: calc(100vh - 170px);
+}
+
+.focus-sidebar,
+.focus-content {
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(188, 204, 233, 0.9);
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(35, 63, 123, 0.1);
+  padding: 14px;
+}
+
+.calendar-card {
+  padding: 4px;
+}
+
+.calendar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.weekdays,
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.weekdays {
+  font-size: 0.75rem;
+  color: #7b8cab;
+  margin-bottom: 4px;
+}
+
+.weekdays span {
+  text-align: center;
+}
+
+.day-cell {
+  border: none;
+  background: transparent;
+  height: 30px;
+  border-radius: 8px;
+  color: #2b3c5c;
+}
+
+.day-cell.muted {
+  opacity: 0.5;
+}
+
+.day-cell.today {
+  background: #f0f5ff;
+  border: 1px solid #b9c9ea;
+}
+
+.sections-card {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.section-item {
+  border: none;
+  background: transparent;
+  text-align: left;
+  color: #334968;
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-item.active,
+.section-item:hover {
+  background: #eef3ff;
+}
+
+.content-head {
+  margin-bottom: 12px;
+}
+
+.add-task-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed #b9c8e8;
+  color: #556c90;
+  background: rgba(255, 255, 255, 0.8);
+  margin-bottom: 12px;
+}
+
+.task-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-row {
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid #cedaf1;
+  display: flex;
+  justify-content: space-between;
   gap: 12px;
-}
-
-.reset-btn {
-  white-space: nowrap;
-}
-
-.task-card {
   cursor: pointer;
-  transition: all 0.24s ease;
-  border: 1px solid rgba(189, 206, 234, 0.95);
-  box-shadow: 0 8px 20px rgba(34, 63, 126, 0.08);
-  border-radius: 16px;
 }
 
-.task-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 14px 28px rgba(39, 68, 131, 0.14);
-  border-color: rgba(154, 180, 224, 1);
+.row-todo { background: #ecf2ff; }
+.row-progress { background: #efeaff; }
+.row-done { background: #eaf7ea; }
+.row-archived { background: #f5f6f8; }
+
+.task-title {
+  margin: 0 0 2px 0;
+  color: #1e2f4b;
 }
 
-.card-header {
-  background-color: #f8f9fa;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+.task-sub {
+  margin: 0 0 7px 0;
+  color: #5f7193;
+  font-size: 0.9rem;
 }
 
-.card-footer {
-  background-color: #f8f9fa;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.badge {
-  font-size: 0.78em;
+.chip {
+  font-size: 0.74rem;
   border-radius: 999px;
-  padding: 0.4rem 0.7rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(177, 195, 227, 0.9);
+  padding: 2px 8px;
+  color: #43597d;
 }
 
-.dropdown-menu {
-  min-width: 120px;
+.chip.danger {
+  background: #ffe8ea;
+  border-color: #ffb8c0;
+  color: #a33745;
 }
 
-.form-select {
-  flex: 1;
-  min-width: 150px;
+.chip.muted {
+  color: #6a7c9f;
 }
 
-@media (max-width: 768px) {
-  .filters-grid {
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border: 1px solid #c3d1eb;
+  background: #fff;
+  color: #36507b;
+}
+
+.icon-btn.danger {
+  color: #b4364a;
+}
+
+.empty-state {
+  padding: 30px 0;
+  text-align: center;
+  color: #768ab0;
+}
+
+.soft-blue { background: #dce8ff; color: #244981; }
+.soft-purple { background: #e9ddff; color: #4f3b82; }
+.soft-green { background: #dff4df; color: #2f6d3a; }
+.soft-gray { background: #eceff4; color: #4f5e77; }
+
+@media (max-width: 992px) {
+  .focus-layout {
     grid-template-columns: 1fr;
   }
-
-  .form-select {
-    width: 100%;
-  }
 }
+
 </style>

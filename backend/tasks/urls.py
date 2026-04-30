@@ -7,6 +7,9 @@ from .views import (
     LoginView,
     PasswordResetView,
     PriorityListCreateView,
+    ProjectListCreateView,
+    ProjectMembershipCreateView,
+    ProjectRetrieveUpdateDestroyView,
     RegisterView,
     ReportView,
     TaskListCreateView,
@@ -25,6 +28,13 @@ urlpatterns = [
     path("auth/reset-password/", PasswordResetView.as_view(), name="reset_password"),
     path("categories/", CategoryListCreateView.as_view(), name="category_list_create"),
     path("priorities/", PriorityListCreateView.as_view(), name="priority_list_create"),
+    path("projects/", ProjectListCreateView.as_view(), name="project_list_create"),
+    path("projects/<int:pk>/", ProjectRetrieveUpdateDestroyView.as_view(), name="project_detail"),
+    path(
+        "projects/<int:project_id>/memberships/",
+        ProjectMembershipCreateView.as_view(),
+        name="project_membership_create",
+    ),
     path("tasks/", TaskListCreateView.as_view(), name="task_list_create"),
     path(
         "tasks/<int:pk>/",

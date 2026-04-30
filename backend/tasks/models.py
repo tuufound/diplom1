@@ -1,6 +1,62 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+
+class Project(models.Model):
+    name = models.CharField(max_length=120)
+    description = models.TextField(blank=True, null=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="owned_projects")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "name"],
+                name="unique_project_name_per_owner",
+            )
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class ProjectMembership(models.Model):
+    ROLE_OWNER = "owner"
+    ROLE_EDITOR = "editor"
+    ROLE_VIEWER = "viewer"
+    ROLE_CHOICES = [
+        (ROLE_OWNER, "Owner"),
+        (ROLE_EDITOR, "Editor"),
+        (ROLE_VIEWER, "Viewer"),
+    ]
+
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="memberships",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="project_memberships",
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_VIEWER)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "user"],
+                name="unique_user_membership_per_project",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} in {self.project.name} ({self.role})"
+
+
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
@@ -43,6 +99,13 @@ class Task(models.Model):
     due_date = models.DateTimeField(blank=True, null=True)
     completed_at = models.DateTimeField(blank=True, null=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='tasks')
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tasks",
+    )
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, blank=True, null=True, related_name='tasks')
     priority = models.ForeignKey(Priority, on_delete=models.SET_NULL, blank=True, null=True, related_name='tasks')
     is_active = models.BooleanField(default=True)

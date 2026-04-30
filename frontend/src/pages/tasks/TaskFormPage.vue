@@ -56,6 +56,15 @@
 
           <div class="row mb-3">
             <div class="col-md-6">
+              <label for="project" class="form-label">Проект</label>
+              <select class="form-select" id="project" v-model="form.project">
+                <option value="">Личная задача</option>
+                <option v-for="project in projects" :key="project.id" :value="project.id">
+                  {{ project.name }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-6">
               <label for="category" class="form-label">Категория</label>
               <select class="form-select" id="category" v-model="form.category">
                 <option value="">Выберите категорию</option>
@@ -113,6 +122,7 @@ export default {
       description: '',
       status: 'todo',
       priority: '',
+      project: '',
       category: '',
       due_date: '',
       is_active: true
@@ -120,6 +130,7 @@ export default {
 
     const priorities = ref([])
     const categories = ref([])
+    const projects = ref([])
     const loading = ref(false)
     const isEditing = computed(() => !!route.params.id)
 
@@ -133,6 +144,7 @@ export default {
             description: task.description,
             status: task.status,
             priority: task.priority?.id || '',
+            project: task.project?.id || '',
             category: task.category?.id || '',
             due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : '',
             is_active: task.is_active
@@ -162,12 +174,22 @@ export default {
       }
     }
 
+    const fetchProjects = async () => {
+      try {
+        const response = await api.getProjects()
+        projects.value = response.data
+      } catch (error) {
+        console.error('Error fetching projects:', error)
+      }
+    }
+
     const handleSubmit = async () => {
       try {
         loading.value = true
         const payload = {
           ...form.value,
           priority: form.value.priority ? Number(form.value.priority) : null,
+          project: form.value.project ? Number(form.value.project) : null,
           category: form.value.category ? Number(form.value.category) : null,
           due_date: form.value.due_date ? new Date(form.value.due_date).toISOString() : null
         }
@@ -195,12 +217,14 @@ export default {
       fetchTask()
       fetchPriorities()
       fetchCategories()
+      fetchProjects()
     })
 
     return {
       form,
       priorities,
       categories,
+      projects,
       loading,
       isEditing,
       handleSubmit,

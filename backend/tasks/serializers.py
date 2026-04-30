@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from .models import Category, Priority, Task, TimeEntry
+from .models import Category, Priority, Project, ProjectMembership, Task, TimeEntry
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -36,8 +36,47 @@ class PrioritySerializer(serializers.ModelSerializer):
         fields = ("id", "name", "level", "color")
 
 
+class ProjectMembershipSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    user_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        source="user",
+        write_only=True,
+    )
+
+    class Meta:
+        model = ProjectMembership
+        fields = ("id", "user", "user_id", "role", "created_at")
+        read_only_fields = ("id", "created_at", "user")
+
+
+class ProjectSerializer(serializers.ModelSerializer):
+    owner = UserSerializer(read_only=True)
+    memberships = ProjectMembershipSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Project
+        fields = (
+            "id",
+            "name",
+            "description",
+            "owner",
+            "memberships",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("owner", "memberships", "created_at", "updated_at")
+
+
 class TaskSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
+    access_role = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
+    project = serializers.PrimaryKeyRelatedField(
+        queryset=Project.objects.all(),
+        allow_null=True,
+        required=False,
+    )
     category = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(), allow_null=True, required=False
     )
@@ -58,6 +97,9 @@ class TaskSerializer(serializers.ModelSerializer):
             "completed_at",
             "is_active",
             "user",
+            "access_role",
+            "can_edit",
+            "project",
             "category",
             "priority",
         )
@@ -67,16 +109,37 @@ class TaskSerializer(serializers.ModelSerializer):
         data["category"] = (
             CategorySerializer(instance.category).data if instance.category else None
         )
+        data["project"] = (
+            ProjectSerializer(instance.project).data if instance.project else None
+        )
         data["priority"] = (
             PrioritySerializer(instance.priority).data if instance.priority else None
         )
         return data
+
+    def get_access_role(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        if obj.user_id == request.user.id:
+            return "owner"
+        if not obj.project_id:
+            return None
+        membership = ProjectMembership.objects.filter(
+            project=obj.project,
+            user=request.user,
+        ).first()
+        return membership.role if membership else None
+
+    def get_can_edit(self, obj):
+        return self.get_access_role(obj) in {"owner", "editor"}
 
 
 class TimeEntrySerializer(serializers.ModelSerializer):
     task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
     user = UserSerializer(read_only=True)
     duration = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
 
     class Meta:
         model = TimeEntry
@@ -91,6 +154,7 @@ class TimeEntrySerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "duration",
+            "can_edit",
         )
         read_only_fields = ("is_active",)
 
@@ -106,9 +170,32 @@ class TimeEntrySerializer(serializers.ModelSerializer):
 
     def validate_task(self, value):
         request = self.context.get("request")
-        if request and value.user_id != request.user.id:
-            raise serializers.ValidationError("Можно работать только со своими задачами.")
+        if not request:
+            return value
+        if value.user_id == request.user.id:
+            return value
+        membership = ProjectMembership.objects.filter(
+            project=value.project,
+            user=request.user,
+        ).first()
+        if not membership:
+            raise serializers.ValidationError("Нет доступа к выбранной задаче.")
         return value
+
+    def get_can_edit(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        if obj.user_id != request.user.id:
+            return False
+        task = obj.task
+        if task.user_id == request.user.id:
+            return True
+        membership = ProjectMembership.objects.filter(
+            project=task.project,
+            user=request.user,
+        ).first()
+        return bool(membership and membership.role in {"owner", "editor"})
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

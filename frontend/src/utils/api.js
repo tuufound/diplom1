@@ -88,6 +88,23 @@ export default {
     return api.post('/priorities/', data)
   },
 
+  // Project endpoints
+  getProjects() {
+    return api.get('/projects/')
+  },
+  createProject(data) {
+    return api.post('/projects/', data)
+  },
+  updateProject(id, data) {
+    return api.put(`/projects/${id}/`, data)
+  },
+  deleteProject(id) {
+    return api.delete(`/projects/${id}/`)
+  },
+  addProjectMembership(projectId, data) {
+    return api.post(`/projects/${projectId}/memberships/`, data)
+  },
+
   // Time entry endpoints
   getTimeEntries() {
     return api.get('/time-entries/')

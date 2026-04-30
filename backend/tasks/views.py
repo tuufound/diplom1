@@ -1,22 +1,38 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from rest_framework import generics, permissions, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Category, Priority, Task, TimeEntry
+from .models import Category, Priority, Project, ProjectMembership, Task, TimeEntry
 from .serializers import (
     CategorySerializer,
     PrioritySerializer,
+    ProjectMembershipSerializer,
+    ProjectSerializer,
     RegisterSerializer,
     TaskSerializer,
     TimeEntrySerializer,
     UserSerializer,
 )
+
+
+def get_task_role(task, user):
+    if task.user_id == user.id:
+        return "owner"
+    if not task.project_id:
+        return None
+    membership = ProjectMembership.objects.filter(project=task.project, user=user).first()
+    return membership.role if membership else None
+
+
+def can_edit_task(task, user):
+    return get_task_role(task, user) in {"owner", "editor"}
 
 
 class RegisterView(generics.CreateAPIView):
@@ -91,13 +107,82 @@ class PriorityListCreateView(generics.ListCreateAPIView):
     serializer_class = PrioritySerializer
 
 
+class ProjectListCreateView(generics.ListCreateAPIView):
+    serializer_class = ProjectSerializer
+
+    def get_queryset(self):
+        return Project.objects.filter(
+            Q(owner=self.request.user) | Q(memberships__user=self.request.user)
+        ).distinct()
+
+    def perform_create(self, serializer):
+        project = serializer.save(owner=self.request.user)
+        ProjectMembership.objects.get_or_create(
+            project=project,
+            user=self.request.user,
+            defaults={"role": ProjectMembership.ROLE_OWNER},
+        )
+
+
+class ProjectRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = ProjectSerializer
+
+    def get_queryset(self):
+        return Project.objects.filter(
+            Q(owner=self.request.user) | Q(memberships__user=self.request.user)
+        ).distinct()
+
+    def perform_update(self, serializer):
+        project = self.get_object()
+        membership = ProjectMembership.objects.filter(
+            project=project,
+            user=self.request.user,
+        ).first()
+        role = membership.role if membership else None
+        if project.owner_id != self.request.user.id and role not in {
+            ProjectMembership.ROLE_OWNER,
+            ProjectMembership.ROLE_EDITOR,
+        }:
+            raise PermissionDenied("Недостаточно прав для изменения проекта.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.owner_id != self.request.user.id:
+            raise PermissionDenied("Удалять проект может только владелец.")
+        instance.delete()
+
+
+class ProjectMembershipCreateView(generics.CreateAPIView):
+    serializer_class = ProjectMembershipSerializer
+
+    def perform_create(self, serializer):
+        project = generics.get_object_or_404(Project, id=self.kwargs["project_id"])
+        if project.owner_id != self.request.user.id:
+            raise PermissionDenied("Добавлять участников может только владелец.")
+        serializer.save(project=project)
+
+
 class TaskListCreateView(generics.ListCreateAPIView):
     serializer_class = TaskSerializer
 
     def get_queryset(self):
-        return Task.objects.filter(user=self.request.user)
+        return Task.objects.filter(
+            Q(user=self.request.user) | Q(project__memberships__user=self.request.user)
+        ).distinct()
 
     def perform_create(self, serializer):
+        project = serializer.validated_data.get("project")
+        if project:
+            membership = ProjectMembership.objects.filter(
+                project=project,
+                user=self.request.user,
+            ).first()
+            role = membership.role if membership else None
+            if project.owner_id != self.request.user.id and role not in {
+                ProjectMembership.ROLE_OWNER,
+                ProjectMembership.ROLE_EDITOR,
+            }:
+                raise PermissionDenied("Нет прав для создания задачи в этом проекте.")
         serializer.save(user=self.request.user)
 
 
@@ -105,16 +190,36 @@ class TaskRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TaskSerializer
 
     def get_queryset(self):
-        return Task.objects.filter(user=self.request.user)
+        return Task.objects.filter(
+            Q(user=self.request.user) | Q(project__memberships__user=self.request.user)
+        ).distinct()
+
+    def perform_update(self, serializer):
+        task = self.get_object()
+        if not can_edit_task(task, self.request.user):
+            raise PermissionDenied("Недостаточно прав для редактирования задачи.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if not can_edit_task(instance, self.request.user):
+            raise PermissionDenied("Недостаточно прав для удаления задачи.")
+        instance.delete()
 
 
 class TimeEntryListCreateView(generics.ListCreateAPIView):
     serializer_class = TimeEntrySerializer
 
     def get_queryset(self):
-        return TimeEntry.objects.filter(user=self.request.user)
+        return TimeEntry.objects.filter(
+            Q(user=self.request.user)
+            | Q(task__project__memberships__user=self.request.user)
+            | Q(task__user=self.request.user)
+        ).distinct()
 
     def perform_create(self, serializer):
+        task = serializer.validated_data["task"]
+        if not can_edit_task(task, self.request.user):
+            raise PermissionDenied("Только owner/editor может добавлять время.")
         end_time = serializer.validated_data.get("end_time")
         serializer.save(user=self.request.user, is_active=end_time is None)
 
@@ -123,18 +228,40 @@ class TimeEntryRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TimeEntrySerializer
 
     def get_queryset(self):
-        return TimeEntry.objects.filter(user=self.request.user)
+        return TimeEntry.objects.filter(
+            Q(user=self.request.user)
+            | Q(task__project__memberships__user=self.request.user)
+            | Q(task__user=self.request.user)
+        ).distinct()
+
+    def perform_update(self, serializer):
+        entry = self.get_object()
+        if entry.user_id != self.request.user.id:
+            raise PermissionDenied("Изменять запись может только автор.")
+        if not can_edit_task(entry.task, self.request.user):
+            raise PermissionDenied("Недостаточно прав для изменения записи.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.user_id != self.request.user.id:
+            raise PermissionDenied("Удалять запись может только автор.")
+        if not can_edit_task(instance.task, self.request.user):
+            raise PermissionDenied("Недостаточно прав для удаления записи.")
+        instance.delete()
 
 
 class TimeEntryStartView(APIView):
     def post(self, request, task_id):
         try:
-            task = Task.objects.get(id=task_id, user=request.user)
+            task = Task.objects.get(id=task_id)
         except Task.DoesNotExist:
             return Response(
                 {"detail": "Задача не найдена."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+        if not can_edit_task(task, request.user):
+            raise PermissionDenied("Только owner/editor может запускать таймер.")
 
         active_entry = TimeEntry.objects.filter(
             user=request.user, task=task, end_time__isnull=True, is_active=True
@@ -158,15 +285,17 @@ class TimeEntryStartView(APIView):
 class TimeEntryStopView(APIView):
     def post(self, request, time_entry_id):
         try:
-            entry = TimeEntry.objects.get(
-                id=time_entry_id,
-                user=request.user,
-            )
+            entry = TimeEntry.objects.get(id=time_entry_id)
         except TimeEntry.DoesNotExist:
             return Response(
                 {"detail": "Запись времени не найдена."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+        if entry.user_id != request.user.id:
+            raise PermissionDenied("Останавливать таймер может только автор.")
+        if not can_edit_task(entry.task, request.user):
+            raise PermissionDenied("Недостаточно прав для остановки таймера.")
 
         if entry.end_time:
             return Response(
@@ -182,8 +311,14 @@ class TimeEntryStopView(APIView):
 
 class ReportView(APIView):
     def get(self, request):
-        tasks = Task.objects.filter(user=request.user)
-        entries = TimeEntry.objects.filter(user=request.user)
+        tasks = Task.objects.filter(
+            Q(user=request.user) | Q(project__memberships__user=request.user)
+        ).distinct()
+        entries = TimeEntry.objects.filter(
+            Q(user=request.user)
+            | Q(task__project__memberships__user=request.user)
+            | Q(task__user=request.user)
+        ).distinct()
 
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")

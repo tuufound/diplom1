@@ -40,8 +40,7 @@ export default {
 
 .main-content {
   flex: 1;
-  padding: 20px;
-  background-color: #f8f9fa;
+  padding: 24px;
 }
 
 @import './assets/main.scss';

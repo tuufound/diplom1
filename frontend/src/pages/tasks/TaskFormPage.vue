@@ -1,11 +1,12 @@
 <template>
-  <div class="task-form-container">
+  <div class="task-form-container page-shell">
     <div class="card">
-      <div class="card-header bg-primary text-white">
+      <div class="card-header">
         <h4 class="mb-0">
           <i class="fas" :class="isEditing ? 'fa-edit' : 'fa-plus'"></i>
           {{ isEditing ? 'Редактировать задачу' : 'Создать новую задачу' }}
         </h4>
+        <p class="section-subtitle mt-2 mb-0">Новый стиль формы: минимум шума, максимум читаемости.</p>
       </div>
       <div class="card-body">
         <form @submit.prevent="handleSubmit">
@@ -211,14 +212,14 @@ export default {
 
 <style scoped>
 .task-form-container {
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
 .card {
-  border: none;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
+  border: 1px solid rgba(188, 204, 233, 0.9);
+  box-shadow: 0 12px 30px rgba(35, 63, 123, 0.11);
+  border-radius: 18px;
   overflow: hidden;
 }
 
@@ -232,31 +233,25 @@ export default {
 }
 
 .form-label {
-  font-weight: 500;
+  font-weight: 600;
   margin-bottom: 0.5rem;
+  color: #1b2a46;
 }
 
 .form-control, .form-select {
-  border-radius: 6px;
-  border: 1px solid #ced4da;
+  border-radius: 12px;
+  border: 1px solid #c6d3ed;
   padding: 0.75rem 1rem;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .form-control:focus, .form-select:focus {
-  border-color: #42b983;
-  box-shadow: 0 0 0 0.25rem rgba(66, 185, 131, 0.25);
+  border-color: #8aa7ff;
+  box-shadow: 0 0 0 0.22rem rgba(119, 146, 255, 0.22);
 }
 
 .btn-primary {
-  background-color: #42b983;
-  border-color: #42b983;
   padding: 0.75rem 1.5rem;
-}
-
-.btn-primary:hover {
-  background-color: #3aa876;
-  border-color: #3aa876;
 }
 
 .btn-outline-secondary {

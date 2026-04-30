@@ -1,11 +1,12 @@
 <template>
-  <div class="reports-container">
-    <h2 class="mb-4">
+  <div class="reports-container page-shell">
+    <h2 class="mb-2 page-title">
       <i class="fas fa-chart-bar me-2"></i>Отчеты и аналитика
     </h2>
+    <p class="section-subtitle mb-4">Анализ реального времени по задачам и продуктивности.</p>
 
     <div class="card mb-4">
-      <div class="card-header bg-primary text-white">
+      <div class="card-header">
         <h5 class="mb-0">Фильтры</h5>
       </div>
       <div class="card-body">
@@ -47,10 +48,37 @@
       </div>
     </div>
 
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="stat-card">
+          <div class="stat-label">Всего задач</div>
+          <div class="stat-value">{{ report.total_tasks || 0 }}</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card">
+          <div class="stat-label">Потрачено времени</div>
+          <div class="stat-value">{{ formatSeconds(report.total_tracked_seconds || 0) }}</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card">
+          <div class="stat-label">Среднее выполнение</div>
+          <div class="stat-value">{{ avgCompletionLabel }}</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card">
+          <div class="stat-label">Закрыто задач</div>
+          <div class="stat-value">{{ report.completed_tasks || 0 }}</div>
+        </div>
+      </div>
+    </div>
+
     <div class="row g-4">
       <div class="col-lg-6">
         <div class="card">
-          <div class="card-header bg-primary text-white">
+          <div class="card-header">
             <h5 class="mb-0">Статистика по статусам</h5>
           </div>
           <div class="card-body">
@@ -63,7 +91,7 @@
 
       <div class="col-lg-6">
         <div class="card">
-          <div class="card-header bg-primary text-white">
+          <div class="card-header">
             <h5 class="mb-0">Статистика по приоритетам</h5>
           </div>
           <div class="card-body">
@@ -76,8 +104,8 @@
     </div>
 
     <div class="card mt-4">
-      <div class="card-header bg-primary text-white">
-        <h5 class="mb-0">Время, затраченное на задачи</h5>
+      <div class="card-header">
+        <h5 class="mb-0">Самые дорогие задачи по времени</h5>
       </div>
       <div class="card-body">
         <div class="chart-container">
@@ -87,7 +115,18 @@
     </div>
 
     <div class="card mt-4">
-      <div class="card-header bg-primary text-white">
+      <div class="card-header">
+        <h5 class="mb-0">Продуктивность по дням недели</h5>
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas ref="weekdayChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
         <h5 class="mb-0">Детальная статистика</h5>
       </div>
       <div class="card-body">
@@ -99,7 +138,7 @@
                 <th>Статус</th>
                 <th>Приоритет</th>
                 <th>Категория</th>
-                <th>Время</th>
+                <th>Реально потратил</th>
                 <th>Прогресс</th>
               </tr>
             </thead>
@@ -162,6 +201,7 @@ export default {
 
     const tasks = ref([])
     const timeEntries = ref([])
+    const report = ref({})
     const loading = ref(false)
 
     const dateRange = ref('week')
@@ -171,20 +211,27 @@ export default {
     const statusChart = ref(null)
     const priorityChart = ref(null)
     const timeChart = ref(null)
+    const weekdayChart = ref(null)
 
     let statusChartInstance = null
     let priorityChartInstance = null
     let timeChartInstance = null
+    let weekdayChartInstance = null
 
     const fetchData = async () => {
       try {
         loading.value = true
-        const [tasksResponse, timeEntriesResponse] = await Promise.all([
+        const [tasksResponse, timeEntriesResponse, reportResponse] = await Promise.all([
           api.getTasks(),
-          api.getTimeEntries()
+          api.getTimeEntries(),
+          api.getReports({
+            start_date: startDate.value || undefined,
+            end_date: endDate.value || undefined
+          })
         ])
         tasks.value = tasksResponse.data
         timeEntries.value = timeEntriesResponse.data
+        report.value = reportResponse.data
         updateCharts()
       } catch (error) {
         toast.error('Ошибка загрузки данных для отчетов')
@@ -203,6 +250,10 @@ export default {
         const createdAt = parseISO(task.created_at)
         return createdAt >= start && createdAt <= end
       })
+    })
+    const avgCompletionLabel = computed(() => {
+      if (!report.value?.avg_completion_seconds) return 'Нет данных'
+      return formatSeconds(report.value.avg_completion_seconds)
     })
 
     const getStatusText = (status) => {
@@ -257,7 +308,14 @@ export default {
 
     const getTaskTime = (task) => {
       // Calculate total time spent on this task
-      const taskTimeEntries = timeEntries.value.filter(entry => entry.task.id === task.id)
+      const start = startDate.value ? parseISO(`${startDate.value}T00:00:00`) : null
+      const end = endDate.value ? parseISO(`${endDate.value}T23:59:59`) : null
+      const taskTimeEntries = timeEntries.value.filter(entry => {
+        if (entry.task.id !== task.id) return false
+        if (!start || !end) return true
+        const entryStart = parseISO(entry.start_time)
+        return entryStart >= start && entryStart <= end
+      })
       let totalSeconds = 0
 
       taskTimeEntries.forEach(entry => {
@@ -286,6 +344,7 @@ export default {
       if (statusChartInstance) statusChartInstance.destroy()
       if (priorityChartInstance) priorityChartInstance.destroy()
       if (timeChartInstance) timeChartInstance.destroy()
+      if (weekdayChartInstance) weekdayChartInstance.destroy()
 
       // Status chart
       const statusCounts = {
@@ -380,21 +439,16 @@ export default {
       })
 
       // Time chart
-      const timeData = filteredTasks.value.map(task => {
-        return {
-          task: task.title,
-          time: getTaskTimeInMinutes(task)
-        }
-      }).sort((a, b) => b.time - a.time).slice(0, 10) // Top 10 tasks by time
+      const topTimeTasks = report.value.top_time_tasks || []
 
       const timeCtx = timeChart.value.getContext('2d')
       timeChartInstance = new Chart(timeCtx, {
         type: 'bar',
         data: {
-          labels: timeData.map(item => item.task),
+          labels: topTimeTasks.map(item => item.task_title),
           datasets: [{
             label: 'Время (минуты)',
-            data: timeData.map(item => item.time),
+            data: topTimeTasks.map(item => Math.round(item.seconds / 60)),
             backgroundColor: '#42b983',
             borderWidth: 1
           }]
@@ -415,25 +469,46 @@ export default {
           indexAxis: 'y'
         }
       })
-    }
 
-    const getTaskTimeInMinutes = (task) => {
-      const taskTimeEntries = timeEntries.value.filter(entry => entry.task.id === task.id)
-      let totalSeconds = 0
-
-      taskTimeEntries.forEach(entry => {
-        if (entry.duration) {
-          const parts = entry.duration.split(':')
-          if (parts.length === 3) {
-            totalSeconds += parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2])
+      const weekdayData = report.value.productivity_by_weekday || []
+      const weekdayCtx = weekdayChart.value.getContext('2d')
+      weekdayChartInstance = new Chart(weekdayCtx, {
+        type: 'line',
+        data: {
+          labels: weekdayData.map(item => item.weekday),
+          datasets: [{
+            label: 'Часы',
+            data: weekdayData.map(item => Number((item.seconds / 3600).toFixed(2))),
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37,99,235,0.15)',
+            fill: true,
+            tension: 0.35
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          },
+          plugins: {
+            legend: { display: false }
           }
         }
       })
-
-      return Math.floor(totalSeconds / 60)
     }
 
-    const applyFilters = () => updateCharts()
+    const formatSeconds = (seconds) => {
+      const safeSeconds = Math.max(0, Number(seconds) || 0)
+      const hours = Math.floor(safeSeconds / 3600)
+      const minutes = Math.floor((safeSeconds % 3600) / 60)
+      if (hours > 0) return `${hours}ч ${minutes}м`
+      return `${minutes}м`
+    }
+
+    const applyFilters = () => fetchData()
 
     const getRowsForExport = () => {
       return filteredTasks.value.map(task => ([
@@ -500,25 +575,28 @@ export default {
 
     watch(dateRange, () => {
       setDateRange()
-      updateCharts()
+      fetchData()
     })
 
     onMounted(() => {
-      fetchData()
       setDateRange()
+      fetchData()
     })
 
     return {
       tasks,
       timeEntries,
       loading,
+      report,
       dateRange,
       startDate,
       endDate,
       statusChart,
       priorityChart,
       timeChart,
+      weekdayChart,
       filteredTasks,
+      avgCompletionLabel,
       applyFilters,
       exportCsv,
       exportPdf,
@@ -527,7 +605,8 @@ export default {
       getProgressBarClass,
       getProgressWidth,
       getProgressValue,
-      getTaskTime
+      getTaskTime,
+      formatSeconds
     }
   }
 }
@@ -539,6 +618,27 @@ export default {
   margin: 0 auto;
 }
 
+.stat-card {
+  padding: 16px 18px;
+  border: 1px solid rgba(188, 204, 233, 0.9);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: 0 10px 24px rgba(35, 63, 123, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.stat-label {
+  font-size: 0.86rem;
+  color: #5f7092;
+}
+
+.stat-value {
+  font-size: 1.42rem;
+  line-height: 1.1;
+  font-weight: 700;
+  color: #16253f;
+}
+
 .chart-container {
   position: relative;
   height: 300px;
@@ -547,7 +647,7 @@ export default {
 
 .card {
   margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 24px rgba(35, 63, 123, 0.08);
 }
 
 .card-header {
@@ -559,8 +659,8 @@ export default {
 }
 
 .table th {
-  background-color: #f8f9fa;
-  border-bottom: 2px solid #dee2e6;
+  background-color: rgba(245, 249, 255, 0.9);
+  border-bottom: 2px solid #d9e4f6;
 }
 
 .badge {

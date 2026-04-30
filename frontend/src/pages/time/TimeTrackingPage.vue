@@ -1,13 +1,14 @@
 <template>
-  <div class="time-tracking-container">
-    <h2 class="mb-4">
+  <div class="time-tracking-container page-shell">
+    <h2 class="mb-2 page-title">
       <i class="fas fa-clock me-2"></i>Отслеживание времени
     </h2>
+    <p class="section-subtitle mb-4">Сфокусированный режим: учет времени + Pomodoro в одном месте.</p>
 
     <div class="row g-4">
       <div class="col-lg-8">
         <div class="card mb-4">
-          <div class="card-header bg-primary text-white">
+          <div class="card-header">
             <h5 class="mb-0">Активный таймер</h5>
           </div>
           <div class="card-body">
@@ -38,7 +39,7 @@
         </div>
 
         <div class="card">
-          <div class="card-header bg-primary text-white">
+          <div class="card-header">
             <h5 class="mb-0">История времени</h5>
           </div>
           <div class="card-body">
@@ -95,7 +96,7 @@
 
       <div class="col-lg-4">
         <div class="card">
-          <div class="card-header bg-primary text-white">
+          <div class="card-header">
             <h5 class="mb-0">Запустить новый таймер</h5>
           </div>
           <div class="card-body">
@@ -129,7 +130,7 @@
           </div>
         </div>
         <div class="card mt-4">
-          <div class="card-header bg-secondary text-white">
+          <div class="card-header">
             <h5 class="mb-0">Ручной ввод времени</h5>
           </div>
           <div class="card-body">
@@ -158,6 +159,22 @@
                 Сохранить вручную
               </button>
             </form>
+          </div>
+        </div>
+        <div class="card mt-4">
+          <div class="card-header">
+            <h5 class="mb-0">Pomodoro режим</h5>
+          </div>
+          <div class="card-body text-center">
+            <div class="pomodoro-time mb-3">{{ pomodoroDisplay }}</div>
+            <div class="btn-group w-100 mb-2">
+              <button class="btn btn-outline-success" @click="startPomodoro" :disabled="pomodoroRunning">Старт</button>
+              <button class="btn btn-outline-warning" @click="pausePomodoro" :disabled="!pomodoroRunning">Пауза</button>
+              <button class="btn btn-outline-secondary" @click="resetPomodoro">Сброс</button>
+            </div>
+            <small class="text-muted">
+              {{ pomodoroWorkMode ? 'Фокус 25 минут' : 'Перерыв 5 минут' }}
+            </small>
           </div>
         </div>
       </div>
@@ -200,6 +217,15 @@ export default {
 
     const formattedTime = ref('00:00:00')
     let timerInterval = null
+    const pomodoroSeconds = ref(25 * 60)
+    const pomodoroRunning = ref(false)
+    const pomodoroWorkMode = ref(true)
+    let pomodoroInterval = null
+    const pomodoroDisplay = computed(() => {
+      const mm = Math.floor(pomodoroSeconds.value / 60).toString().padStart(2, '0')
+      const ss = (pomodoroSeconds.value % 60).toString().padStart(2, '0')
+      return `${mm}:${ss}`
+    })
 
     const fetchTimeEntries = async () => {
       try {
@@ -377,6 +403,36 @@ export default {
       }
     }
 
+    const pomodoroTick = () => {
+      if (pomodoroSeconds.value <= 1) {
+        pomodoroWorkMode.value = !pomodoroWorkMode.value
+        pomodoroSeconds.value = pomodoroWorkMode.value ? 25 * 60 : 5 * 60
+        toast.info(pomodoroWorkMode.value ? 'Новая фокус-сессия' : 'Время перерыва')
+        return
+      }
+      pomodoroSeconds.value -= 1
+    }
+
+    const startPomodoro = () => {
+      if (pomodoroRunning.value) return
+      pomodoroRunning.value = true
+      pomodoroInterval = setInterval(pomodoroTick, 1000)
+    }
+
+    const pausePomodoro = () => {
+      pomodoroRunning.value = false
+      if (pomodoroInterval) {
+        clearInterval(pomodoroInterval)
+        pomodoroInterval = null
+      }
+    }
+
+    const resetPomodoro = () => {
+      pausePomodoro()
+      pomodoroWorkMode.value = true
+      pomodoroSeconds.value = 25 * 60
+    }
+
     onMounted(() => {
       fetchTimeEntries()
       fetchTasks()
@@ -390,6 +446,9 @@ export default {
       if (timerInterval) {
         clearInterval(timerInterval)
       }
+      if (pomodoroInterval) {
+        clearInterval(pomodoroInterval)
+      }
     })
 
     return {
@@ -402,6 +461,9 @@ export default {
       manualEntry,
       activeTimeEntry,
       formattedTime,
+      pomodoroDisplay,
+      pomodoroRunning,
+      pomodoroWorkMode,
       startNewTimer,
       stopTimer,
       editTimeEntry,
@@ -410,7 +472,10 @@ export default {
       formatDateTime,
       formatDuration,
       truncateText,
-      saveManualEntry
+      saveManualEntry,
+      startPomodoro,
+      pausePomodoro,
+      resetPomodoro
     }
   }
 }
@@ -424,19 +489,21 @@ export default {
 
 .active-timer {
   padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border-left: 4px solid #42b983;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(236, 244, 255, 0.9) 100%);
+  border-radius: 14px;
+  border-left: 4px solid #7282ff;
+  border: 1px solid rgba(193, 208, 234, 0.8);
 }
 
 .timer-display {
   font-family: 'Courier New', monospace;
-  color: #333;
+  color: #1a2944;
   text-align: center;
   padding: 20px;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(40, 68, 132, 0.08);
+  border: 1px solid rgba(198, 211, 236, 0.85);
 }
 
 .no-active-timer {
@@ -452,8 +519,8 @@ export default {
 }
 
 .table th {
-  background-color: #f8f9fa;
-  border-bottom: 2px solid #dee2e6;
+  background-color: rgba(245, 249, 255, 0.85);
+  border-bottom: 2px solid #d9e4f6;
 }
 
 .btn-danger {
@@ -464,6 +531,13 @@ export default {
 .btn-danger:hover {
   background-color: #c82333;
   border-color: #bd2130;
+}
+
+.pomodoro-time {
+  font-size: 2.2rem;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  color: #273b63;
 }
 
 @media (max-width: 992px) {

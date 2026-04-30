@@ -185,6 +185,15 @@ class ReportView(APIView):
         tasks = Task.objects.filter(user=request.user)
         entries = TimeEntry.objects.filter(user=request.user)
 
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+        if start_date:
+            entries = entries.filter(start_time__date__gte=start_date)
+            tasks = tasks.filter(created_at__date__gte=start_date)
+        if end_date:
+            entries = entries.filter(start_time__date__lte=end_date)
+            tasks = tasks.filter(created_at__date__lte=end_date)
+
         status_stats = dict(
             tasks.values("status")
             .annotate(total=Count("id"))
@@ -204,6 +213,63 @@ class ReportView(APIView):
             .order_by("day")
         )
 
+        completed_entries = entries.exclude(end_time__isnull=True).select_related("task")
+        task_time_seconds = {}
+        weekday_time_seconds = {i: 0 for i in range(7)}
+
+        for entry in completed_entries:
+            duration_seconds = int((entry.end_time - entry.start_time).total_seconds())
+            if duration_seconds <= 0:
+                continue
+            task_id = entry.task_id
+            if task_id not in task_time_seconds:
+                task_time_seconds[task_id] = {
+                    "task_id": task_id,
+                    "task_title": entry.task.title,
+                    "seconds": 0,
+                }
+            task_time_seconds[task_id]["seconds"] += duration_seconds
+
+            weekday = timezone.localtime(entry.start_time).weekday()
+            weekday_time_seconds[weekday] += duration_seconds
+
+        top_time_tasks = sorted(
+            task_time_seconds.values(), key=lambda item: item["seconds"], reverse=True
+        )[:10]
+
+        weekday_labels = [
+            "Понедельник",
+            "Вторник",
+            "Среда",
+            "Четверг",
+            "Пятница",
+            "Суббота",
+            "Воскресенье",
+        ]
+        productivity_by_weekday = [
+            {
+                "weekday": weekday_labels[idx],
+                "seconds": weekday_time_seconds[idx],
+            }
+            for idx in range(7)
+        ]
+
+        completed_tasks = tasks.filter(status="done").exclude(completed_at__isnull=True)
+        avg_completion_seconds = None
+        if completed_tasks.exists():
+            total_completion_seconds = 0
+            valid_count = 0
+            for task in completed_tasks:
+                if task.completed_at and task.created_at and task.completed_at > task.created_at:
+                    total_completion_seconds += int(
+                        (task.completed_at - task.created_at).total_seconds()
+                    )
+                    valid_count += 1
+            if valid_count:
+                avg_completion_seconds = total_completion_seconds // valid_count
+
+        total_tracked_seconds = sum(item["seconds"] for item in task_time_seconds.values())
+
         return Response(
             {
                 "total_tasks": tasks.count(),
@@ -212,5 +278,9 @@ class ReportView(APIView):
                 "status_stats": status_stats,
                 "priority_stats": priority_stats,
                 "daily_time_entries": daily_time,
+                "total_tracked_seconds": total_tracked_seconds,
+                "top_time_tasks": top_time_tasks,
+                "productivity_by_weekday": productivity_by_weekday,
+                "avg_completion_seconds": avg_completion_seconds,
             }
         )

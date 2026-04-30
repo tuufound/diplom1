@@ -112,7 +112,7 @@ export default {
   },
 
   // Report endpoints
-  getReports() {
-    return api.get('/reports/')
+  getReports(params = {}) {
+    return api.get('/reports/', { params })
   }
 }

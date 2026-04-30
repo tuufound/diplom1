@@ -1,7 +1,7 @@
 <template>
-  <div class="tasks-container">
+  <div class="tasks-container page-shell">
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2 class="mb-0">
+      <h2 class="page-title">
         <i class="fas fa-tasks me-2"></i>Мои задачи
       </h2>
       <router-link to="/tasks/create" class="btn btn-primary">
@@ -9,13 +9,13 @@
       </router-link>
     </div>
 
-    <div class="card mb-4">
+    <div class="card mb-4 filter-shell">
       <div class="card-body">
         <div v-if="dueSoonTasks.length" class="alert alert-warning">
           <strong>Напоминания:</strong> скоро дедлайн у {{ dueSoonTasks.length }} задач.
         </div>
-        <div class="d-flex flex-wrap gap-3 mb-3">
-          <select v-model="filterStatus" class="form-select" style="width: 200px;">
+        <div class="filters-grid mb-3">
+          <select v-model="filterStatus" class="form-select">
             <option value="">Все статусы</option>
             <option value="todo">To Do</option>
             <option value="in_progress">In Progress</option>
@@ -23,21 +23,21 @@
             <option value="archived">Archived</option>
           </select>
 
-          <select v-model="filterPriority" class="form-select" style="width: 200px;">
+          <select v-model="filterPriority" class="form-select">
             <option value="">Все приоритеты</option>
             <option v-for="priority in priorities" :key="priority.id" :value="priority.id">
               {{ priority.name }}
             </option>
           </select>
 
-          <select v-model="filterCategory" class="form-select" style="width: 200px;">
+          <select v-model="filterCategory" class="form-select">
             <option value="">Все категории</option>
             <option v-for="category in categories" :key="category.id" :value="category.id">
               {{ category.name }}
             </option>
           </select>
 
-          <button class="btn btn-outline-secondary" @click="resetFilters">
+          <button class="btn btn-outline-secondary reset-btn" @click="resetFilters">
             <i class="fas fa-redo me-1"></i> Сбросить
           </button>
         </div>
@@ -335,17 +335,32 @@ export default {
   margin: 0 auto;
 }
 
+.filter-shell {
+  border-radius: 18px;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr)) auto;
+  gap: 12px;
+}
+
+.reset-btn {
+  white-space: nowrap;
+}
+
 .task-card {
   cursor: pointer;
-  transition: all 0.3s ease;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.24s ease;
+  border: 1px solid rgba(189, 206, 234, 0.95);
+  box-shadow: 0 8px 20px rgba(34, 63, 126, 0.08);
+  border-radius: 16px;
 }
 
 .task-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  border-color: rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 14px 28px rgba(39, 68, 131, 0.14);
+  border-color: rgba(154, 180, 224, 1);
 }
 
 .card-header {
@@ -359,7 +374,9 @@ export default {
 }
 
 .badge {
-  font-size: 0.85em;
+  font-size: 0.78em;
+  border-radius: 999px;
+  padding: 0.4rem 0.7rem;
 }
 
 .dropdown-menu {
@@ -372,12 +389,12 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .d-flex.flex-wrap.gap-3 {
-    flex-direction: column;
+  .filters-grid {
+    grid-template-columns: 1fr;
   }
 
   .form-select {
-    width: 100% !important;
+    width: 100%;
   }
 }
 </style>

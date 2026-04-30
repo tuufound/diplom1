@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: diplom-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # Сохраняем node_modules внутри контейнера
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    stdin_open: true
+    tty: true
+    networks:
+      - diplom-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: diplom-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/.venv  # Игнорируем локальную .venv
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DEBUG=1
+    networks:
+      - diplom-network
+
+networks:
+  diplom-network:
+    driver: bridge

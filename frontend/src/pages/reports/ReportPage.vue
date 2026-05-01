@@ -1,185 +1,117 @@
 <template>
   <div class="reports-container page-shell">
-    <h2 class="mb-2 page-title">
-      <i class="fas fa-chart-bar me-2"></i>Отчеты и аналитика
-    </h2>
-    <p class="section-subtitle mb-4">Анализ реального времени по задачам и продуктивности.</p>
-
-    <div class="card mb-4">
-      <div class="card-header">
-        <h5 class="mb-0">Фильтры</h5>
+    <div class="page-head">
+      <div>
+        <h2 class="page-title"><i class="fas fa-chart-pie me-2"></i>Отчеты</h2>
+        <p class="section-subtitle">Простой обзор: что сделано, где узкие места и куда уходит время.</p>
       </div>
+      <div class="head-actions">
+        <button class="btn btn-outline-success" @click="exportCsv"><i class="fas fa-file-csv me-1"></i>CSV</button>
+        <button class="btn btn-outline-danger" @click="exportPdf"><i class="fas fa-file-pdf me-1"></i>PDF</button>
+      </div>
+    </div>
+
+    <section class="card controls-card mb-4">
       <div class="card-body">
-        <div class="row g-3">
-          <div class="col-md-3">
-            <label for="dateRange" class="form-label">Период</label>
-            <select class="form-select" id="dateRange" v-model="dateRange">
-              <option value="week">Последняя неделя</option>
-              <option value="month">Последний месяц</option>
-              <option value="quarter">Последний квартал</option>
-              <option value="year">Последний год</option>
-              <option value="custom">Произвольный</option>
-            </select>
+        <div class="period-tabs">
+          <button v-for="option in periodOptions" :key="option.value" class="period-tab" :class="{ active: dateRange === option.value }" @click="setPresetRange(option.value)">
+            {{ option.label }}
+          </button>
+        </div>
+        <div v-if="dateRange === 'custom'" class="custom-range">
+          <div>
+            <label class="form-label">Начало</label>
+            <input v-model="startDate" type="date" class="form-control">
           </div>
-          <div class="col-md-3" v-if="dateRange === 'custom'">
-            <label for="startDate" class="form-label">Начало</label>
-            <input type="date" class="form-control" id="startDate" v-model="startDate">
+          <div>
+            <label class="form-label">Конец</label>
+            <input v-model="endDate" type="date" class="form-control">
           </div>
-          <div class="col-md-3" v-if="dateRange === 'custom'">
-            <label for="endDate" class="form-label">Конец</label>
-            <input type="date" class="form-control" id="endDate" v-model="endDate">
-          </div>
-          <div class="col-md-3 d-flex align-items-end">
-            <button class="btn btn-primary w-100" @click="applyFilters">
-              <i class="fas fa-filter me-1"></i> Применить
-            </button>
-          </div>
-          <div class="col-md-3 d-flex align-items-end">
-            <button class="btn btn-outline-success w-100" @click="exportCsv">
-              <i class="fas fa-file-csv me-1"></i> CSV
-            </button>
-          </div>
-          <div class="col-md-3 d-flex align-items-end">
-            <button class="btn btn-outline-danger w-100" @click="exportPdf">
-              <i class="fas fa-file-pdf me-1"></i> PDF
-            </button>
-          </div>
+          <button class="btn btn-primary align-self-end" @click="applyFilters">Применить</button>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="row g-3 mb-4">
-      <div class="col-md-3">
-        <div class="stat-card">
-          <div class="stat-label">Всего задач</div>
-          <div class="stat-value">{{ report.total_tasks || 0 }}</div>
-        </div>
+    <section v-if="loading" class="card loading-card mb-4">
+      <div class="card-body">
+        <div class="skeleton"></div>
+        <div class="skeleton short"></div>
       </div>
-      <div class="col-md-3">
-        <div class="stat-card">
-          <div class="stat-label">Потрачено времени</div>
-          <div class="stat-value">{{ formatSeconds(report.total_tracked_seconds || 0) }}</div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="stat-card">
-          <div class="stat-label">Среднее выполнение</div>
-          <div class="stat-value">{{ avgCompletionLabel }}</div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="stat-card">
-          <div class="stat-label">Закрыто задач</div>
-          <div class="stat-value">{{ report.completed_tasks || 0 }}</div>
-        </div>
-      </div>
-    </div>
+    </section>
 
-    <div class="row g-4">
-      <div class="col-lg-6">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">Статистика по статусам</h5>
+    <section class="metrics-grid mb-4">
+      <article class="metric-card">
+        <span>Всего задач</span>
+        <strong>{{ report.total_tasks || 0 }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Закрыто</span>
+        <strong>{{ report.completed_tasks || 0 }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Потрачено времени</span>
+        <strong>{{ formatSeconds(report.total_tracked_seconds || 0) }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Среднее выполнение</span>
+        <strong>{{ avgCompletionLabel }}</strong>
+      </article>
+    </section>
+
+    <section class="content-grid mb-4">
+      <div class="card report-card">
+        <div class="card-header"><h5 class="mb-0">Статусы задач</h5></div>
+        <div class="card-body">
+          <div class="status-list">
+            <article v-for="item in statusSummary" :key="item.key" class="status-row">
+              <div class="status-row-head">
+                <span class="status-name">{{ item.label }}</span>
+                <span class="status-count">{{ item.count }} · {{ item.percent }}%</span>
+              </div>
+              <div class="status-track">
+                <div class="status-fill" :class="`status-${item.key}`" :style="{ width: `${item.percent}%` }"></div>
+              </div>
+            </article>
           </div>
-          <div class="card-body">
-            <div class="chart-container">
-              <canvas ref="statusChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card report-card">
+        <div class="card-header"><h5 class="mb-0">Топ задач по времени</h5></div>
+        <div class="card-body">
+          <div v-if="topTimeTasks.length === 0" class="empty-state">Нет данных по времени за период</div>
+          <div v-else class="top-list">
+            <article v-for="item in topTimeTasks" :key="item.task_id" class="top-row">
+              <div class="top-title">{{ item.task_title }}</div>
+              <div class="top-time">{{ formatSeconds(item.seconds) }}</div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card report-card">
+      <div class="card-header"><h5 class="mb-0">Задачи за период</h5></div>
+      <div class="card-body">
+        <div v-if="filteredTasks.length === 0" class="empty-state">Нет задач для выбранного периода</div>
+        <div v-else class="task-grid">
+          <article v-for="task in filteredTasks" :key="task.id" class="task-card">
+            <div class="task-head">
+              <h6>{{ task.title }}</h6>
+              <span class="status-pill" :class="statusPillClass(task.status)">{{ getStatusText(task.status) }}</span>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-6">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">Статистика по приоритетам</h5>
-          </div>
-          <div class="card-body">
-            <div class="chart-container">
-              <canvas ref="priorityChart"></canvas>
+            <div class="task-meta">
+              <span v-if="task.priority" class="meta-pill">{{ task.priority.name }}</span>
+              <span v-if="task.category" class="meta-pill">{{ task.category.name }}</span>
+              <span class="meta-pill">{{ getTaskTime(task) }}</span>
             </div>
-          </div>
+            <div class="task-progress">
+              <div class="task-progress-fill" :class="statusBarClass(task.status)" :style="{ width: progressWidth(task.status) }"></div>
+            </div>
+          </article>
         </div>
       </div>
-    </div>
-
-    <div class="card mt-4">
-      <div class="card-header">
-        <h5 class="mb-0">Самые дорогие задачи по времени</h5>
-      </div>
-      <div class="card-body">
-        <div class="chart-container">
-          <canvas ref="timeChart"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="card mt-4">
-      <div class="card-header">
-        <h5 class="mb-0">Продуктивность по дням недели</h5>
-      </div>
-      <div class="card-body">
-        <div class="chart-container">
-          <canvas ref="weekdayChart"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="card mt-4">
-      <div class="card-header">
-        <h5 class="mb-0">Детальная статистика</h5>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-hover">
-            <thead>
-              <tr>
-                <th>Задача</th>
-                <th>Статус</th>
-                <th>Приоритет</th>
-                <th>Категория</th>
-                <th>Реально потратил</th>
-                <th>Прогресс</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="task in filteredTasks" :key="task.id">
-                <td>{{ task.title }}</td>
-                <td>
-                  <span class="badge" :class="getStatusBadgeClass(task.status)">
-                    {{ getStatusText(task.status) }}
-                  </span>
-                </td>
-                <td>
-                  <span v-if="task.priority" class="badge bg-warning text-dark">
-                    {{ task.priority.name }}
-                  </span>
-                </td>
-                <td>
-                  <span v-if="task.category" class="badge bg-info">
-                    {{ task.category.name }}
-                  </span>
-                </td>
-                <td>{{ getTaskTime(task) }}</td>
-                <td>
-                  <div class="progress" style="height: 20px;">
-                    <div
-                      class="progress-bar"
-                      :class="getProgressBarClass(task.status)"
-                      role="progressbar"
-                      :style="{ width: getProgressWidth(task.status) }"
-                      :aria-valuenow="getProgressValue(task.status)"
-                      aria-valuemin="0"
-                      aria-valuemax="100"
-                    ></div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    </section>
   </div>
 </template>
 
@@ -187,36 +119,30 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import api from '@/utils/api'
 import { useToast } from 'vue-toastification'
-import { Chart, registerables } from 'chart.js'
-import { format, subDays, subMonths, subQuarters, subYears, parseISO } from 'date-fns'
+import { format, subDays, subMonths, subQuarters, subYears, parseISO, startOfDay } from 'date-fns'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-
-Chart.register(...registerables)
 
 export default {
   name: 'ReportPage',
   setup() {
     const toast = useToast()
-
     const tasks = ref([])
     const timeEntries = ref([])
     const report = ref({})
     const loading = ref(false)
-
     const dateRange = ref('week')
     const startDate = ref('')
     const endDate = ref('')
 
-    const statusChart = ref(null)
-    const priorityChart = ref(null)
-    const timeChart = ref(null)
-    const weekdayChart = ref(null)
-
-    let statusChartInstance = null
-    let priorityChartInstance = null
-    let timeChartInstance = null
-    let weekdayChartInstance = null
+    const periodOptions = [
+      { value: 'day', label: 'День' },
+      { value: 'week', label: 'Неделя' },
+      { value: 'month', label: 'Месяц' },
+      { value: 'quarter', label: 'Квартал' },
+      { value: 'year', label: 'Год' },
+      { value: 'custom', label: 'Произвольный' }
+    ]
 
     const fetchData = async () => {
       try {
@@ -232,10 +158,8 @@ export default {
         tasks.value = tasksResponse.data
         timeEntries.value = timeEntriesResponse.data
         report.value = reportResponse.data
-        updateCharts()
       } catch (error) {
-        toast.error('Ошибка загрузки данных для отчетов')
-        console.error('Error fetching report data:', error)
+        toast.error('Ошибка загрузки данных отчетов')
       } finally {
         loading.value = false
       }
@@ -244,286 +168,117 @@ export default {
     const filteredTasks = computed(() => {
       const start = startDate.value ? parseISO(`${startDate.value}T00:00:00`) : null
       const end = endDate.value ? parseISO(`${endDate.value}T23:59:59`) : null
-
       return tasks.value.filter(task => {
         if (!start || !end) return true
         const createdAt = parseISO(task.created_at)
         return createdAt >= start && createdAt <= end
       })
     })
+
+    const topTimeTasks = computed(() => (report.value?.top_time_tasks || []).slice(0, 6))
+
+    const statusSummary = computed(() => {
+      const counts = { todo: 0, in_progress: 0, done: 0, archived: 0 }
+      filteredTasks.value.forEach(task => {
+        if (counts[task.status] !== undefined) counts[task.status] += 1
+      })
+      const total = filteredTasks.value.length || 1
+      return [
+        { key: 'todo', label: 'К выполнению' },
+        { key: 'in_progress', label: 'В процессе' },
+        { key: 'done', label: 'Выполнено' },
+        { key: 'archived', label: 'В архиве' }
+      ].map(item => ({
+        ...item,
+        count: counts[item.key],
+        percent: Math.round((counts[item.key] / total) * 100)
+      }))
+    })
+
     const avgCompletionLabel = computed(() => {
       if (!report.value?.avg_completion_seconds) return 'Нет данных'
       return formatSeconds(report.value.avg_completion_seconds)
     })
 
     const getStatusText = (status) => {
-      const statusMap = {
-        'todo': 'К выполнению',
-        'in_progress': 'В процессе',
-        'done': 'Выполнено',
-        'archived': 'В архиве'
+      const map = {
+        todo: 'К выполнению',
+        in_progress: 'В процессе',
+        done: 'Выполнено',
+        archived: 'В архиве'
       }
-      return statusMap[status] || status
+      return map[status] || status
     }
 
-    const getStatusBadgeClass = (status) => {
-      const statusMap = {
-        'todo': 'bg-secondary',
-        'in_progress': 'bg-primary',
-        'done': 'bg-success',
-        'archived': 'bg-dark'
-      }
-      return statusMap[status] || 'bg-secondary'
-    }
+    const statusPillClass = (status) => `pill-${status || 'todo'}`
+    const statusBarClass = (status) => `fill-${status || 'todo'}`
 
-    const getProgressBarClass = (status) => {
-      const statusMap = {
-        'todo': 'bg-secondary',
-        'in_progress': 'bg-primary',
-        'done': 'bg-success',
-        'archived': 'bg-dark'
-      }
-      return statusMap[status] || 'bg-secondary'
-    }
-
-    const getProgressWidth = (status) => {
-      const statusMap = {
-        'todo': '25%',
-        'in_progress': '75%',
-        'done': '100%',
-        'archived': '100%'
-      }
-      return statusMap[status] || '25%'
-    }
-
-    const getProgressValue = (status) => {
-      const statusMap = {
-        'todo': 25,
-        'in_progress': 75,
-        'done': 100,
-        'archived': 100
-      }
-      return statusMap[status] || 25
+    const progressWidth = (status) => {
+      const map = { todo: '25%', in_progress: '70%', done: '100%', archived: '100%' }
+      return map[status] || '25%'
     }
 
     const getTaskTime = (task) => {
-      // Calculate total time spent on this task
-      const start = startDate.value ? parseISO(`${startDate.value}T00:00:00`) : null
-      const end = endDate.value ? parseISO(`${endDate.value}T23:59:59`) : null
-      const taskTimeEntries = timeEntries.value.filter(entry => {
-        if (entry.task.id !== task.id) return false
-        if (!start || !end) return true
-        const entryStart = parseISO(entry.start_time)
-        return entryStart >= start && entryStart <= end
-      })
-      let totalSeconds = 0
-
-      taskTimeEntries.forEach(entry => {
-        if (entry.duration) {
-          const parts = entry.duration.split(':')
-          if (parts.length === 3) {
-            totalSeconds += parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2])
-          }
-        }
-      })
-
-      const hours = Math.floor(totalSeconds / 3600)
-      const minutes = Math.floor((totalSeconds % 3600) / 60)
-
-      if (hours > 0) {
-        return `${hours}ч ${minutes}м`
-      } else if (minutes > 0) {
-        return `${minutes}м`
-      } else {
-        return '0м'
-      }
-    }
-
-    const updateCharts = () => {
-      // Destroy existing charts
-      if (statusChartInstance) statusChartInstance.destroy()
-      if (priorityChartInstance) priorityChartInstance.destroy()
-      if (timeChartInstance) timeChartInstance.destroy()
-      if (weekdayChartInstance) weekdayChartInstance.destroy()
-
-      // Status chart
-      const statusCounts = {
-        'todo': 0,
-        'in_progress': 0,
-        'done': 0,
-        'archived': 0
-      }
-
-      filteredTasks.value.forEach(task => {
-        statusCounts[task.status]++
-      })
-
-      const statusCtx = statusChart.value.getContext('2d')
-      statusChartInstance = new Chart(statusCtx, {
-        type: 'doughnut',
-        data: {
-          labels: ['К выполнению', 'В процессе', 'Выполнено', 'В архиве'],
-          datasets: [{
-            data: [
-              statusCounts.todo,
-              statusCounts.in_progress,
-              statusCounts.done,
-              statusCounts.archived
-            ],
-            backgroundColor: [
-              '#6c757d',
-              '#0d6efd',
-              '#198754',
-              '#212529'
-            ],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom'
-            },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  const label = context.label || ''
-                  const value = context.raw || 0
-                  const total = context.dataset.data.reduce((a, b) => a + b, 0)
-                  const percentage = total ? Math.round((value / total) * 100) : 0
-                  return `${label}: ${value} (${percentage}%)`
-                }
-              }
-            }
-          }
-        }
-      })
-
-      // Priority chart
-      const priorityCounts = {}
-      filteredTasks.value.forEach(task => {
-        if (task.priority) {
-          const priorityName = task.priority.name
-          priorityCounts[priorityName] = (priorityCounts[priorityName] || 0) + 1
-        }
-      })
-
-      const priorityCtx = priorityChart.value.getContext('2d')
-      priorityChartInstance = new Chart(priorityCtx, {
-        type: 'bar',
-        data: {
-          labels: Object.keys(priorityCounts),
-          datasets: [{
-            label: 'Количество задач',
-            data: Object.values(priorityCounts),
-            backgroundColor: '#fd7e14',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true
-            }
-          },
-          plugins: {
-            legend: {
-              display: false
-            }
-          }
-        }
-      })
-
-      // Time chart
-      const topTimeTasks = report.value.top_time_tasks || []
-
-      const timeCtx = timeChart.value.getContext('2d')
-      timeChartInstance = new Chart(timeCtx, {
-        type: 'bar',
-        data: {
-          labels: topTimeTasks.map(item => item.task_title),
-          datasets: [{
-            label: 'Время (минуты)',
-            data: topTimeTasks.map(item => Math.round(item.seconds / 60)),
-            backgroundColor: '#42b983',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true
-            }
-          },
-          plugins: {
-            legend: {
-              display: false
-            }
-          },
-          indexAxis: 'y'
-        }
-      })
-
-      const weekdayData = report.value.productivity_by_weekday || []
-      const weekdayCtx = weekdayChart.value.getContext('2d')
-      weekdayChartInstance = new Chart(weekdayCtx, {
-        type: 'line',
-        data: {
-          labels: weekdayData.map(item => item.weekday),
-          datasets: [{
-            label: 'Часы',
-            data: weekdayData.map(item => Number((item.seconds / 3600).toFixed(2))),
-            borderColor: '#2563eb',
-            backgroundColor: 'rgba(37,99,235,0.15)',
-            fill: true,
-            tension: 0.35
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true
-            }
-          },
-          plugins: {
-            legend: { display: false }
-          }
-        }
-      })
+      const related = timeEntries.value.filter(entry => entry.task.id === task.id && entry.duration)
+      const total = related.reduce((sum, entry) => {
+        const parts = String(entry.duration).split(':')
+        if (parts.length !== 3) return sum
+        return sum + Number(parts[0]) * 3600 + Number(parts[1]) * 60 + Number(parts[2])
+      }, 0)
+      return formatSeconds(total)
     }
 
     const formatSeconds = (seconds) => {
       const safeSeconds = Math.max(0, Number(seconds) || 0)
-      const hours = Math.floor(safeSeconds / 3600)
-      const minutes = Math.floor((safeSeconds % 3600) / 60)
-      if (hours > 0) return `${hours}ч ${minutes}м`
-      return `${minutes}м`
+      const h = Math.floor(safeSeconds / 3600)
+      const m = Math.floor((safeSeconds % 3600) / 60)
+      if (h > 0) return `${h}ч ${m}м`
+      return `${m}м`
+    }
+
+    const setDateRange = () => {
+      const now = new Date()
+      let start
+      switch (dateRange.value) {
+        case 'day':
+          start = startOfDay(now)
+          break
+        case 'week':
+          start = subDays(now, 7)
+          break
+        case 'month':
+          start = subMonths(now, 1)
+          break
+        case 'quarter':
+          start = subQuarters(now, 1)
+          break
+        case 'year':
+          start = subYears(now, 1)
+          break
+        default:
+          return
+      }
+      startDate.value = format(start, 'yyyy-MM-dd')
+      endDate.value = format(now, 'yyyy-MM-dd')
+    }
+
+    const setPresetRange = (preset) => {
+      dateRange.value = preset
     }
 
     const applyFilters = () => fetchData()
 
-    const getRowsForExport = () => {
-      return filteredTasks.value.map(task => ([
-        task.title,
-        getStatusText(task.status),
-        task.priority?.name || '-',
-        task.category?.name || '-',
-        getTaskTime(task)
-      ]))
-    }
+    const getRowsForExport = () => filteredTasks.value.map(task => ([
+      task.title,
+      getStatusText(task.status),
+      task.priority?.name || '-',
+      task.category?.name || '-',
+      getTaskTime(task)
+    ]))
 
     const exportCsv = () => {
       const header = ['Задача', 'Статус', 'Приоритет', 'Категория', 'Время']
-      const rows = getRowsForExport()
-      const csv = [header, ...rows]
+      const csv = [header, ...getRowsForExport()]
         .map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(','))
         .join('\n')
       const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' })
@@ -548,34 +303,11 @@ export default {
       doc.save(`report-${startDate.value || 'all'}-${endDate.value || 'all'}.pdf`)
     }
 
-    const setDateRange = () => {
-      const now = new Date()
-      let start
-
-      switch (dateRange.value) {
-        case 'week':
-          start = subDays(now, 7)
-          break
-        case 'month':
-          start = subMonths(now, 1)
-          break
-        case 'quarter':
-          start = subQuarters(now, 1)
-          break
-        case 'year':
-          start = subYears(now, 1)
-          break
-        default:
-          return
-      }
-
-      startDate.value = format(start, 'yyyy-MM-dd')
-      endDate.value = format(now, 'yyyy-MM-dd')
-    }
-
     watch(dateRange, () => {
-      setDateRange()
-      fetchData()
+      if (dateRange.value !== 'custom') {
+        setDateRange()
+        fetchData()
+      }
     })
 
     onMounted(() => {
@@ -584,27 +316,24 @@ export default {
     })
 
     return {
-      tasks,
-      timeEntries,
       loading,
       report,
+      filteredTasks,
+      topTimeTasks,
+      statusSummary,
       dateRange,
       startDate,
       endDate,
-      statusChart,
-      priorityChart,
-      timeChart,
-      weekdayChart,
-      filteredTasks,
+      periodOptions,
       avgCompletionLabel,
+      setPresetRange,
       applyFilters,
       exportCsv,
       exportPdf,
       getStatusText,
-      getStatusBadgeClass,
-      getProgressBarClass,
-      getProgressWidth,
-      getProgressValue,
+      statusPillClass,
+      statusBarClass,
+      progressWidth,
       getTaskTime,
       formatSeconds
     }
@@ -614,66 +343,257 @@ export default {
 
 <style scoped>
 .reports-container {
-  max-width: 1400px;
+  max-width: 1260px;
   margin: 0 auto;
 }
 
-.stat-card {
-  padding: 16px 18px;
-  border: 1px solid rgba(188, 204, 233, 0.9);
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.head-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.controls-card,
+.report-card,
+.metric-card {
+  border: 1px solid rgba(224, 206, 232, 0.84);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.74);
-  box-shadow: 0 10px 24px rgba(35, 63, 123, 0.08);
-  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 24px rgba(136, 110, 149, 0.14);
 }
 
-.stat-label {
-  font-size: 0.86rem;
-  color: #5f7092;
+.period-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.stat-value {
-  font-size: 1.42rem;
+.period-tab {
+  border: 1px solid rgba(216, 196, 226, 0.8);
+  background: #fff;
+  border-radius: 999px;
+  color: #65567d;
+  padding: 7px 12px;
+  font-size: 0.83rem;
+}
+
+.period-tab.active {
+  background: linear-gradient(135deg, #f6e8f5, #f1e2f7);
+  color: #3a4c78;
+  border-color: rgba(194, 170, 211, 0.9);
+}
+
+.custom-range {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+}
+
+.loading-card .card-body {
+  padding: 16px;
+}
+
+.skeleton {
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ebe3f2, #f7f2fa, #ebe3f2);
+  background-size: 220% 100%;
+  animation: shimmer 1.1s linear infinite;
+}
+
+.skeleton.short {
+  margin-top: 8px;
+  width: 65%;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metric-card {
+  padding: 12px 14px;
+}
+
+.metric-card span {
+  display: block;
+  color: #7a6991;
+  font-size: 0.82rem;
+}
+
+.metric-card strong {
+  color: #2f3f6d;
+  font-size: 1.3rem;
   line-height: 1.1;
-  font-weight: 700;
-  color: #16253f;
 }
 
-.chart-container {
-  position: relative;
-  height: 300px;
-  width: 100%;
+.content-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 12px;
 }
 
-.card {
-  margin-bottom: 20px;
-  box-shadow: 0 10px 24px rgba(35, 63, 123, 0.08);
+.report-card .card-header {
+  background: linear-gradient(180deg, rgba(251, 246, 252, 0.95), rgba(247, 238, 250, 0.9));
+  border-bottom: 1px solid rgba(224, 208, 233, 0.85);
+  color: #2f3e68;
 }
 
-.card-header {
-  font-weight: 500;
+.status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.table-responsive {
-  overflow-x: auto;
+.status-row-head {
+  display: flex;
+  justify-content: space-between;
+  color: #5f4d83;
+  margin-bottom: 6px;
+  font-size: 0.86rem;
 }
 
-.table th {
-  background-color: rgba(245, 249, 255, 0.9);
-  border-bottom: 2px solid #d9e4f6;
+.status-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #eee8f3;
+  overflow: hidden;
 }
 
-.badge {
-  font-size: 0.85em;
+.status-fill {
+  height: 100%;
+  border-radius: inherit;
 }
 
-.progress {
-  margin-bottom: 0;
+.status-todo { background: linear-gradient(90deg, #8d98a9, #7d899a); }
+.status-in_progress { background: linear-gradient(90deg, #4f89f0, #2f74e3); }
+.status-done { background: linear-gradient(90deg, #47bf86, #2f9f6a); }
+.status-archived { background: linear-gradient(90deg, #7b8493, #636d7c); }
+
+.top-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.top-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(245, 238, 250, 0.8);
+}
+
+.top-title {
+  color: #3c4c76;
+}
+
+.top-time {
+  color: #66557f;
+  font-weight: 600;
+}
+
+.task-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.task-card {
+  border: 1px solid rgba(224, 209, 233, 0.88);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 10px;
+}
+
+.task-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.task-head h6 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #34466d;
+}
+
+.status-pill,
+.meta-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.pill-todo { background: #ece9f2; color: #5f6676; }
+.pill-in_progress { background: #e5efff; color: #3657a4; }
+.pill-done { background: #e8f8ef; color: #2f7b59; }
+.pill-archived { background: #f1ecf5; color: #66577d; }
+
+.task-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.meta-pill {
+  background: #f3edf8;
+  color: #685a83;
+}
+
+.task-progress {
+  margin-top: 10px;
+  height: 8px;
+  border-radius: 999px;
+  background: #ebeef3;
+  overflow: hidden;
+}
+
+.task-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.fill-todo { background: linear-gradient(90deg, #8d98a9, #7d899a); }
+.fill-in_progress { background: linear-gradient(90deg, #4f89f0, #2f74e3); }
+.fill-done { background: linear-gradient(90deg, #47bf86, #2f9f6a); }
+.fill-archived { background: linear-gradient(90deg, #7b8493, #636d7c); }
+
+.empty-state {
+  color: #7f6a8e;
+  text-align: center;
+  padding: 14px 0;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
 
 @media (max-width: 992px) {
-  .reports-container {
-    padding: 0 15px;
+  .page-head {
+    flex-direction: column;
+  }
+
+  .metrics-grid,
+  .content-grid,
+  .task-grid,
+  .custom-range {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -1,98 +1,103 @@
 <template>
-  <div class="focus-layout page-shell">
-    <aside class="focus-sidebar">
-      <div class="calendar-card">
-        <div class="calendar-head">
-          <button class="icon-btn" type="button"><i class="fas fa-chevron-left"></i></button>
-          <strong>{{ monthLabel }}</strong>
-          <button class="icon-btn" type="button"><i class="fas fa-chevron-right"></i></button>
+  <div class="tasks-page page-shell">
+    <div class="tasks-surface">
+      <div class="tasks-head">
+        <div>
+          <h2 class="page-title"><i class="fas fa-list-check me-2"></i>Задачи</h2>
+          <p class="section-subtitle">Быстрый список: ищи, фильтруй, открывай детали.</p>
         </div>
-        <div class="weekdays">
-          <span v-for="wd in weekDays" :key="wd">{{ wd }}</span>
-        </div>
-        <div class="days-grid">
-          <button
-            v-for="day in calendarDays"
-            :key="day.toISOString()"
-            class="day-cell"
-            :class="{ muted: !isCurrentMonth(day), today: isToday(day) }"
-            type="button"
-          >
-            {{ format(day, 'd') }}
-          </button>
+        <div class="tasks-actions">
+          <router-link to="/kanban" class="btn btn-outline-secondary">
+            <i class="fas fa-table-columns me-1"></i> Канбан
+          </router-link>
+          <router-link to="/tasks/create" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> Новая задача
+          </router-link>
         </div>
       </div>
 
-      <nav class="sections-card">
-        <button class="section-item active"><i class="fas fa-bookmark"></i> В фокусе</button>
-        <button class="section-item"><i class="fas fa-play"></i> В работе <span>{{ activeTasksCount }}</span></button>
-        <button class="section-item"><i class="fas fa-calendar-day"></i> Сегодня <span>{{ todayTasksCount }}</span></button>
-        <button class="section-item"><i class="fas fa-clock"></i> Просрочено <span>{{ overdueTasksCount }}</span></button>
-      </nav>
-    </aside>
-
-    <section class="focus-content">
-      <div class="content-head">
-        <h2 class="page-title"><i class="fas fa-list me-2"></i>В фокусе</h2>
+      <div class="tasks-toolbar card">
+        <div class="card-body">
+          <div class="toolbar-row">
+            <div class="search">
+              <i class="fas fa-search"></i>
+              <input v-model="query" class="form-control" type="text" placeholder="Поиск по названию и описанию">
+            </div>
+            <div class="status-filters">
+              <button class="filter-pill" :class="{ active: statusFilter === 'all' }" @click="statusFilter = 'all'">Все</button>
+              <button class="filter-pill" :class="{ active: statusFilter === 'todo' }" @click="statusFilter = 'todo'">К выполнению</button>
+              <button class="filter-pill" :class="{ active: statusFilter === 'in_progress' }" @click="statusFilter = 'in_progress'">В процессе</button>
+              <button class="filter-pill" :class="{ active: statusFilter === 'done' }" @click="statusFilter = 'done'">Выполнено</button>
+              <button class="filter-pill" :class="{ active: statusFilter === 'archived' }" @click="statusFilter = 'archived'">Архив</button>
+            </div>
+          </div>
+          <div class="kpis">
+            <span class="kpi">Активные: <strong>{{ activeTasksCount }}</strong></span>
+            <span class="kpi">Сегодня: <strong>{{ todayTasksCount }}</strong></span>
+            <span class="kpi">Просрочено: <strong>{{ overdueTasksCount }}</strong></span>
+          </div>
+        </div>
       </div>
 
-      <router-link to="/tasks/create" class="add-task-row">
-        <i class="fas fa-plus"></i>
-        Добавить задачу
-      </router-link>
-
-      <div v-if="visibleTasks.length === 0" class="empty-state">
-        <i class="fas fa-inbox"></i>
-        <p>Задачи не найдены</p>
+      <div v-if="visibleTasksFiltered.length === 0" class="empty-state card">
+        <div class="card-body">
+          <i class="fas fa-inbox"></i>
+          <p>Задачи не найдены</p>
+        </div>
       </div>
 
       <div v-else class="task-rows">
-        <article
-          v-for="item in visibleTasks"
-          :key="item.task.id"
-          class="task-row"
-          :class="[getRowClass(item.task), { 'is-child': item.isChild }]"
-          @click="goToTaskDetail(item.task.id)"
-        >
-          <div class="task-main">
-            <div class="title-row">
-              <button
-                v-if="hasSubtasks(item.task.id)"
-                class="collapse-btn"
-                type="button"
-                @click.stop="toggleSubtasks(item.task.id)"
-              >
-                <i class="fas" :class="isExpanded(item.task.id) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+        <transition-group name="slide-up" tag="div" class="task-rows">
+          <article
+            v-for="item in visibleTasksFiltered"
+            :key="item.task.id"
+            class="task-row"
+            :class="[getRowClass(item.task), { 'is-child': item.isChild }]"
+            @click="goToTaskDetail(item.task.id)"
+          >
+            <div class="task-main">
+              <div class="title-row">
+                <button
+                  v-if="hasSubtasks(item.task.id)"
+                  class="collapse-btn"
+                  type="button"
+                  @click.stop="toggleSubtasks(item.task.id)"
+                >
+                  <i class="fas" :class="isExpanded(item.task.id) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                </button>
+                <span v-else class="collapse-placeholder"></span>
+                <h6 class="task-title">{{ item.task.title }}</h6>
+              </div>
+              <p v-if="item.task.description" class="task-sub">{{ truncateText(item.task.description, 110) }}</p>
+              <div class="chips">
+                <span class="chip" :class="getStatusChipClass(item.task.status)">{{ getStatusText(item.task.status) }}</span>
+                <span class="chip muted">{{ formatDate(item.task.created_at) }}</span>
+                <span v-if="item.task.project" class="chip" :class="getProjectChipClass(item.task.project?.id)">{{ item.task.project.name }}</span>
+                <span v-if="item.task.category" class="chip" :class="getCategoryChipClass(item.task.category?.id)">
+                  <span class="me-1">{{ item.task.category.icon || '📁' }}</span>{{ item.task.category.name }}
+                </span>
+                <span v-if="item.task.priority" class="chip" :class="getPriorityChipClass(item.task.priority)">{{ item.task.priority.name }}</span>
+                <span v-if="item.isChild" class="chip child">Подзадача</span>
+              </div>
+            </div>
+            <div class="task-actions">
+              <button class="icon-btn" @click.stop="toggleTimeTracking(item.task)" :disabled="!item.task.can_edit" title="Таймер">
+                <i class="fas" :class="getTimeTrackingIcon(item.task)"></i>
               </button>
-              <span v-else class="collapse-placeholder"></span>
-              <h6 class="task-title">{{ item.task.title }}</h6>
+              <button class="icon-btn" @click.stop="editTask(item.task.id)" :disabled="!item.task.can_edit" title="Редактировать">
+                <i class="fas fa-pen"></i>
+              </button>
+              <button class="icon-btn danger" @click.stop="deleteTask(item.task.id)" :disabled="!item.task.can_edit" title="Удалить">
+                <i class="fas fa-trash"></i>
+              </button>
+              <router-link class="icon-btn" :to="`/tasks/create?parent=${item.task.id}`" title="Подзадача">
+                <i class="fas fa-code-branch"></i>
+              </router-link>
             </div>
-            <p class="task-sub">{{ truncateText(item.task.description, 90) }}</p>
-            <div class="chips">
-              <span class="chip muted"><i class="far fa-calendar-alt"></i> {{ formatDate(item.task.created_at) }}</span>
-              <span v-if="item.task.project" class="chip"><i class="fas fa-briefcase"></i> {{ item.task.project.name }}</span>
-              <span v-if="item.task.category" class="chip"><i class="far fa-folder"></i> {{ item.task.category.name }}</span>
-              <span v-if="item.task.priority" class="chip danger"><i class="fas fa-flag"></i> {{ item.task.priority.name }}</span>
-              <span v-if="item.isChild" class="chip child"><i class="fas fa-level-down-alt"></i> Подзадача</span>
-            </div>
-          </div>
-          <div class="task-actions">
-            <button class="icon-btn" @click.stop="toggleTimeTracking(item.task)" :disabled="!item.task.can_edit">
-              <i class="fas" :class="getTimeTrackingIcon(item.task)"></i>
-            </button>
-            <button class="icon-btn" @click.stop="editTask(item.task.id)" :disabled="!item.task.can_edit">
-              <i class="fas fa-pen"></i>
-            </button>
-            <button class="icon-btn danger" @click.stop="deleteTask(item.task.id)" :disabled="!item.task.can_edit">
-              <i class="fas fa-trash"></i>
-            </button>
-            <router-link class="icon-btn" :to="`/tasks/create?parent=${item.task.id}`" title="Создать подзадачу">
-              <i class="fas fa-code-branch"></i>
-            </router-link>
-          </div>
-        </article>
+          </article>
+        </transition-group>
       </div>
-    </section>
+    </div>
   </div>
 </template>
 
@@ -118,6 +123,8 @@ export default {
     const currentDate = ref(new Date())
     const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
     const expandedParents = ref({})
+    const query = ref('')
+    const statusFilter = ref('all')
 
     const fetchTasks = async () => {
       try {
@@ -179,6 +186,16 @@ export default {
         }
       }
       return result
+    })
+    const visibleTasksFiltered = computed(() => {
+      const q = query.value.trim().toLowerCase()
+      return visibleTasks.value.filter(item => {
+        const task = item.task
+        if (statusFilter.value !== 'all' && task.status !== statusFilter.value) return false
+        if (!q) return true
+        const hay = `${task.title || ''} ${task.description || ''}`.toLowerCase()
+        return hay.includes(q)
+      })
     })
     const monthLabel = computed(() => format(currentDate.value, 'LLLL yyyy', { locale: ru }))
     const calendarDays = computed(() => {
@@ -289,6 +306,36 @@ export default {
       return statusMap[status] || 'soft-blue'
     }
 
+    const getStatusChipClass = (status) => {
+      const statusMap = {
+        todo: 'chip-status-todo',
+        in_progress: 'chip-status-progress',
+        done: 'chip-status-done',
+        archived: 'chip-status-archived'
+      }
+      return statusMap[status] || 'chip-status-todo'
+    }
+
+    const getPriorityChipClass = (priority) => {
+      if (!priority || typeof priority.level !== 'number') return 'chip-priority-default'
+      if (priority.level >= 4) return 'chip-priority-critical'
+      if (priority.level === 3) return 'chip-priority-high'
+      if (priority.level === 2) return 'chip-priority-medium'
+      return 'chip-priority-low'
+    }
+
+    const getProjectChipClass = (projectId) => {
+      const palette = ['chip-project-a', 'chip-project-b', 'chip-project-c', 'chip-project-d']
+      if (!projectId) return palette[0]
+      return palette[Math.abs(Number(projectId)) % palette.length]
+    }
+
+    const getCategoryChipClass = (categoryId) => {
+      const palette = ['chip-category-a', 'chip-category-b', 'chip-category-c', 'chip-category-d']
+      if (!categoryId) return palette[0]
+      return palette[Math.abs(Number(categoryId)) % palette.length]
+    }
+
     const formatDate = (dateString) => {
       if (!dateString) return ''
       return format(new Date(dateString), 'dd MMM yyyy, HH:mm', { locale: ru })
@@ -355,17 +402,24 @@ export default {
       loading,
       filteredTasks,
       visibleTasks,
+      visibleTasksFiltered,
       monthLabel,
       weekDays,
       calendarDays,
       activeTasksCount,
       todayTasksCount,
       overdueTasksCount,
+      query,
+      statusFilter,
       goToTaskDetail,
       editTask,
       deleteTask,
       startTimeTracking,
       getStatusText,
+      getStatusChipClass,
+      getPriorityChipClass,
+      getProjectChipClass,
+      getCategoryChipClass,
       getStatusBadgeClass,
       formatDate,
       truncateText,
@@ -384,106 +438,99 @@ export default {
 </script>
 
 <style scoped>
-.focus-layout {
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 16px;
-  min-height: calc(100vh - 170px);
+.tasks-page {
+  max-width: 1260px;
+  margin: 0 auto;
 }
 
-.focus-sidebar,
-.focus-content {
-  background: rgba(255, 255, 255, 0.74);
-  border: 1px solid rgba(188, 204, 233, 0.9);
-  border-radius: 18px;
-  box-shadow: 0 10px 30px rgba(35, 63, 123, 0.1);
+.tasks-surface {
+  position: relative;
+  border-radius: 24px;
+  padding: 16px;
+  border: 1px solid rgba(224, 206, 232, 0.7);
+  background:
+    radial-gradient(circle at 12% 15%, rgba(245, 195, 210, 0.25), transparent 42%),
+    radial-gradient(circle at 92% 10%, rgba(213, 193, 246, 0.22), transparent 46%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(252, 241, 248, 0.68));
+  box-shadow: 0 16px 36px rgba(136, 110, 149, 0.12);
+  backdrop-filter: blur(10px);
+}
+
+.tasks-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.tasks-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.tasks-toolbar .card-body {
   padding: 14px;
 }
 
-.calendar-card {
-  padding: 4px;
-}
-
-.calendar-head {
+.toolbar-row {
   display: flex;
+  gap: 10px;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
+  flex-wrap: wrap;
 }
 
-.weekdays,
-.days-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+.search {
+  flex: 1;
+  min-width: 240px;
+  position: relative;
 }
 
-.weekdays {
-  font-size: 0.75rem;
-  color: #7b8cab;
-  margin-bottom: 4px;
+.search i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8b7697;
 }
 
-.weekdays span {
-  text-align: center;
+.search .form-control {
+  padding-left: 36px;
 }
 
-.day-cell {
-  border: none;
-  background: transparent;
-  height: 30px;
-  border-radius: 8px;
-  color: #2b3c5c;
-}
-
-.day-cell.muted {
-  opacity: 0.5;
-}
-
-.day-cell.today {
-  background: #f0f5ff;
-  border: 1px solid #b9c9ea;
-}
-
-.sections-card {
-  margin-top: 14px;
+.status-filters {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.section-item {
-  border: none;
-  background: transparent;
-  text-align: left;
-  color: #334968;
-  border-radius: 10px;
-  padding: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.section-item.active,
-.section-item:hover {
-  background: #eef3ff;
-}
-
-.content-head {
-  margin-bottom: 12px;
-}
-
-.add-task-row {
-  display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px dashed #b9c8e8;
-  color: #556c90;
-  background: rgba(255, 255, 255, 0.8);
-  margin-bottom: 12px;
+}
+
+.filter-pill {
+  border: 1px solid rgba(216, 196, 226, 0.8);
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  color: #65567d;
+  padding: 7px 12px;
+  font-size: 0.82rem;
+}
+
+.filter-pill.active {
+  background: linear-gradient(135deg, rgba(246, 232, 245, 0.96), rgba(241, 226, 247, 0.96));
+  color: #3a4c78;
+  border-color: rgba(194, 170, 211, 0.9);
+}
+
+.kpis {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #7a6991;
+  font-size: 0.88rem;
+}
+
+.kpi strong {
+  color: #2f3f6d;
 }
 
 .task-rows {
@@ -495,21 +542,33 @@ export default {
 .task-row {
   border-radius: 12px;
   padding: 10px 12px;
-  border: 1px solid #cedaf1;
+  border: 1px solid rgba(227, 211, 236, 0.88);
   display: flex;
   justify-content: space-between;
   gap: 12px;
   cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: #ffffff;
+  backdrop-filter: none;
 }
 
-.row-todo { background: #ecf2ff; }
-.row-progress { background: #efeaff; }
-.row-done { background: #eaf7ea; }
-.row-archived { background: #f5f6f8; }
+.task-row:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 22px rgba(136, 110, 149, 0.18);
+}
+
+.task-row:hover .task-actions {
+  opacity: 1;
+}
+
+.row-todo { background: #fff9fd; border-left: 4px solid #ff6db8; }
+.row-progress { background: #f9f4ff; border-left: 4px solid #9b7bff; }
+.row-done { background: #f1fbf6; border-left: 4px solid #63c799; }
+.row-archived { background: #f7f4fb; border-left: 4px solid #bca8c9; }
 
 .task-title {
   margin: 0 0 2px 0;
-  color: #1e2f4b;
+  color: #2a2d4f;
 }
 
 .title-row {
@@ -521,10 +580,10 @@ export default {
 .collapse-btn {
   width: 24px;
   height: 24px;
-  border: 1px solid #c3d1eb;
+  border: 1px solid rgba(193, 209, 238, 0.82);
   border-radius: 8px;
-  background: #fff;
-  color: #36507b;
+  background: rgba(255, 255, 255, 0.78);
+  color: #35527c;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -538,7 +597,7 @@ export default {
 
 .task-sub {
   margin: 0 0 7px 0;
-  color: #5f7193;
+  color: #7d7696;
   font-size: 0.9rem;
 }
 
@@ -551,10 +610,10 @@ export default {
 .chip {
   font-size: 0.74rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(177, 195, 227, 0.9);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(220, 206, 230, 0.85);
   padding: 2px 8px;
-  color: #43597d;
+  color: #5b4e7f;
 }
 
 .chip.danger {
@@ -563,34 +622,101 @@ export default {
   color: #a33745;
 }
 
+.chip-status-todo {
+  background: #ffe8f6;
+  border-color: #ffc4e6;
+  color: #9f3f7d;
+}
+
+.chip-status-progress {
+  background: #efe7ff;
+  border-color: #d4c1ff;
+  color: #6846a8;
+}
+
+.chip-status-done {
+  background: #e9f9ef;
+  border-color: #bcebcf;
+  color: #2c8059;
+}
+
+.chip-status-archived {
+  background: #f3eef8;
+  border-color: #dbcee6;
+  color: #705d86;
+}
+
+.chip-project-a { background: #e8f1ff; border-color: #bbd4ff; color: #315f9d; }
+.chip-project-b { background: #eafbf4; border-color: #bcecd4; color: #2f7a5d; }
+.chip-project-c { background: #fff2e8; border-color: #f4cfb4; color: #9b6438; }
+.chip-project-d { background: #f2ecff; border-color: #d7c6ff; color: #6146a8; }
+
+.chip-category-a { background: #fff6de; border-color: #f3e1a8; color: #8d6a13; }
+.chip-category-b { background: #ffecec; border-color: #ffc8c8; color: #a14444; }
+.chip-category-c { background: #e8f7ff; border-color: #b8e5fa; color: #2f6f93; }
+.chip-category-d { background: #eef7ea; border-color: #cfe7c1; color: #4e7a3f; }
+
+.chip-priority-low {
+  background: #e8f7ff;
+  border-color: #bfe7ff;
+  color: #256e99;
+}
+
+.chip-priority-medium {
+  background: #fff5e1;
+  border-color: #ffe0a9;
+  color: #9a6b12;
+}
+
+.chip-priority-high {
+  background: #ffe9d9;
+  border-color: #ffc7a3;
+  color: #b05b17;
+}
+
+.chip-priority-critical {
+  background: #ffe5ea;
+  border-color: #ffb8c8;
+  color: #ab2748;
+}
+
+.chip-priority-default {
+  background: #f3f0ff;
+  border-color: #ddd4ff;
+  color: #5f4da5;
+}
+
 .chip.muted {
-  color: #6a7c9f;
+  color: #5f7398;
 }
 
 .chip.child {
-  background: #edf6ff;
-  border-color: #b9daf9;
-  color: #2d5982;
+  background: rgba(220, 238, 255, 0.72);
+  border-color: rgba(172, 206, 239, 0.82);
+  color: #2f648f;
 }
 
 .task-actions {
   display: flex;
   align-items: center;
   gap: 6px;
+  opacity: 0.55;
+  transition: opacity 0.18s ease;
 }
 
 .task-row.is-child {
   margin-left: 28px;
   border-style: dashed;
+  background-image: linear-gradient(90deg, rgba(106, 137, 211, 0.12), transparent 35%);
 }
 
 .icon-btn {
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  border: 1px solid #c3d1eb;
-  background: #fff;
-  color: #36507b;
+  border: 1px solid rgba(216, 198, 229, 0.9);
+  background: #ffffff;
+  color: #5f4b84;
 }
 
 .icon-btn.danger {
@@ -598,9 +724,8 @@ export default {
 }
 
 .empty-state {
-  padding: 30px 0;
   text-align: center;
-  color: #768ab0;
+  color: #7f6a8e;
 }
 
 .soft-blue { background: #dce8ff; color: #244981; }
@@ -609,8 +734,8 @@ export default {
 .soft-gray { background: #eceff4; color: #4f5e77; }
 
 @media (max-width: 992px) {
-  .focus-layout {
-    grid-template-columns: 1fr;
+  .tasks-head {
+    flex-direction: column;
   }
 }
 

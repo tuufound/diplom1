@@ -27,7 +27,7 @@ class UserSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ("id", "name", "description")
+        fields = ("id", "name", "description", "icon")
 
 
 class PrioritySerializer(serializers.ModelSerializer):

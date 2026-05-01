@@ -1,181 +1,191 @@
 <template>
-  <div class="time-tracking-container page-shell">
-    <h2 class="mb-2 page-title">
-      <i class="fas fa-clock me-2"></i>Отслеживание времени
-    </h2>
-    <p class="section-subtitle mb-4">Сфокусированный режим: учет времени + Pomodoro в одном месте.</p>
-
-    <div class="row g-4">
-      <div class="col-lg-8">
-        <div class="card mb-4">
-          <div class="card-header">
-            <h5 class="mb-0">Активный таймер</h5>
-          </div>
-          <div class="card-body">
-            <div v-if="activeTimeEntry" class="active-timer">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4>{{ activeTimeEntry.task.title }}</h4>
-                <button class="btn btn-danger" @click="stopTimer">
-                  <i class="fas fa-stop me-1"></i> Остановить
-                </button>
-              </div>
-              <p class="text-muted mb-3">{{ activeTimeEntry.description }}</p>
-              <div class="timer-display">
-                <span class="display-4">{{ formattedTime }}</span>
-              </div>
-              <div class="mt-3">
-                <span class="badge bg-info me-2">
-                  <i class="fas fa-calendar me-1"></i>
-                  {{ formatDate(activeTimeEntry.start_time) }}
-                </span>
-              </div>
-            </div>
-            <div v-else class="no-active-timer text-center py-5">
-              <i class="fas fa-clock fa-3x text-muted mb-3"></i>
-              <h4>Нет активного таймера</h4>
-              <p class="text-muted">Выберите задачу для начала отслеживания времени</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">История времени</h5>
-          </div>
-          <div class="card-body">
-            <div v-if="loading" class="text-center py-5">
-              <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Загрузка...</span>
-              </div>
-            </div>
-
-            <div v-else>
-              <div v-if="timeEntries.length === 0" class="text-center py-5">
-                <i class="fas fa-history fa-3x text-muted mb-3"></i>
-                <h4>История пуста</h4>
-                <p class="text-muted">Начните отслеживать время для задач</p>
-              </div>
-
-              <div v-else class="table-responsive">
-                <table class="table table-hover">
-                  <thead>
-                    <tr>
-                      <th>Задача</th>
-                      <th>Начало</th>
-                      <th>Конец</th>
-                      <th>Длительность</th>
-                      <th>Описание</th>
-                      <th>Действия</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="entry in timeEntries" :key="entry.id">
-                      <td>{{ entry.task.title }}</td>
-                      <td>{{ formatDateTime(entry.start_time) }}</td>
-                      <td>{{ entry.end_time ? formatDateTime(entry.end_time) : 'Активно' }}</td>
-                      <td>{{ formatDuration(entry.duration) }}</td>
-                      <td>{{ truncateText(entry.description, 30) }}</td>
-                      <td>
-                        <div class="d-flex gap-2">
-                          <button class="btn btn-sm btn-outline-primary" @click="editTimeEntry(entry)">
-                            <i class="fas fa-edit"></i>
-                          </button>
-                          <button class="btn btn-sm btn-outline-danger" @click="deleteTimeEntry(entry.id)">
-                            <i class="fas fa-trash"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+  <div class="time-page page-shell">
+    <div class="time-surface">
+      <div class="time-head">
+        <div>
+          <h2 class="page-title"><i class="fas fa-clock me-2"></i>Время</h2>
+          <p class="section-subtitle">Быстрый старт таймера, чистая история, простой Pomodoro.</p>
         </div>
       </div>
 
-      <div class="col-lg-4">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">Запустить новый таймер</h5>
-          </div>
-          <div class="card-body">
-            <form @submit.prevent="startNewTimer">
-              <div class="mb-3">
-                <label for="task" class="form-label">Задача</label>
-                <select class="form-select" id="task" v-model="newTimer.task" required>
-                  <option value="">Выберите задачу</option>
-                  <option v-for="task in tasks" :key="task.id" :value="task.id">
-                    {{ task.title }}
-                  </option>
-                </select>
+      <div class="time-grid">
+      <section class="card">
+        <div class="card-header"><h5 class="mb-0">Активный таймер</h5></div>
+        <div class="card-body">
+          <div v-if="activeTimeEntry" class="active-timer">
+            <div class="active-top">
+              <div class="active-title">
+                <div class="task-name">{{ activeTimeEntry.task.title }}</div>
+                <div class="task-meta">{{ formatDate(activeTimeEntry.start_time) }}</div>
               </div>
-
-              <div class="mb-3">
-                <label for="description" class="form-label">Описание</label>
-                <textarea
-                  class="form-control"
-                  id="description"
-                  v-model="newTimer.description"
-                  rows="3"
-                  placeholder="Чем вы занимаетесь?"
-                ></textarea>
-              </div>
-
-              <button type="submit" class="btn btn-primary w-100" :disabled="startingTimer">
-                <span v-if="startingTimer" class="spinner-border spinner-border-sm me-2" role="status"></span>
-                <span>Запустить таймер</span>
+              <button class="btn btn-danger" @click="stopTimer">
+                <i class="fas fa-stop me-1"></i> Стоп
               </button>
-            </form>
+            </div>
+            <div v-if="activeTimeEntry.description" class="active-desc">{{ activeTimeEntry.description }}</div>
+            <div class="timer-display">
+              <span class="display-4">{{ formattedTime }}</span>
+            </div>
+          </div>
+          <div v-else class="no-active">
+            <i class="fas fa-clock"></i>
+            <div>
+              <div class="no-title">Нет активного таймера</div>
+              <div class="no-sub">Запусти таймер справа или из списка задач.</div>
+            </div>
           </div>
         </div>
-        <div class="card mt-4">
-          <div class="card-header">
-            <h5 class="mb-0">Ручной ввод времени</h5>
+      </section>
+
+      <section class="card">
+        <div class="card-header"><h5 class="mb-0">Запустить таймер</h5></div>
+        <div class="card-body">
+          <form @submit.prevent="startNewTimer" class="start-form">
+            <div class="mb-3">
+              <label for="task" class="form-label">Задача</label>
+              <select class="form-select" id="task" v-model="newTimer.task" required>
+                <option value="">Выберите задачу</option>
+                <option v-for="task in tasks" :key="task.id" :value="task.id">
+                  {{ task.title }}
+                </option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="description" class="form-label">Описание</label>
+              <textarea
+                class="form-control"
+                id="description"
+                v-model="newTimer.description"
+                rows="3"
+                placeholder="Коротко: чем занимаешься?"
+              ></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary w-100" :disabled="startingTimer">
+              <span v-if="startingTimer" class="spinner-border spinner-border-sm me-2" role="status"></span>
+              <span>Старт</span>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header"><h5 class="mb-0">История</h5></div>
+        <div class="card-body">
+          <div v-if="loading" class="loading-state">
+            <div class="spinner-border" role="status"></div>
           </div>
-          <div class="card-body">
-            <form @submit.prevent="saveManualEntry">
-              <div class="mb-3">
+          <div v-else-if="timeEntries.length === 0" class="empty-state">
+            <i class="fas fa-history"></i>
+            <p>История пуста</p>
+          </div>
+          <div v-else class="entry-list">
+            <article v-for="entry in timeEntries" :key="entry.id" class="entry-row">
+              <div class="entry-main">
+                <div class="entry-title">{{ entry.task.title }}</div>
+                <div class="entry-sub">
+                  {{ formatDateTime(entry.start_time) }} → {{ entry.end_time ? formatDateTime(entry.end_time) : 'Активно' }}
+                  · <strong>{{ formatDuration(entry.duration) }}</strong>
+                </div>
+                <div v-if="entry.description" class="entry-desc">{{ truncateText(entry.description, 80) }}</div>
+              </div>
+              <div class="entry-actions">
+                <button class="icon-btn" @click="openEditEntry(entry)" title="Редактировать">
+                  <i class="fas fa-pen"></i>
+                </button>
+                <button class="icon-btn danger" @click="requestDeleteEntry(entry.id)" title="Удалить">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header"><h5 class="mb-0">Pomodoro</h5></div>
+        <div class="card-body">
+          <div class="pomodoro">
+            <div class="pomodoro-time">{{ pomodoroDisplay }}</div>
+            <div class="pomodoro-sub">{{ pomodoroWorkMode ? 'Фокус 25 минут' : 'Перерыв 5 минут' }}</div>
+            <div class="pomodoro-actions">
+              <button class="btn btn-outline-success" @click="startPomodoro" :disabled="pomodoroRunning">Старт</button>
+              <button class="btn btn-outline-warning" @click="pausePomodoro" :disabled="!pomodoroRunning">Пауза</button>
+              <button class="btn btn-outline-secondary" @click="resetPomodoro">Сброс</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header"><h5 class="mb-0">Ручной ввод</h5></div>
+        <div class="card-body">
+          <form @submit.prevent="saveManualEntry">
+            <div class="row g-3">
+              <div class="col-md-6">
                 <label class="form-label" for="manualTask">Задача</label>
                 <select id="manualTask" class="form-select" v-model="manualEntry.task" required>
                   <option value="">Выберите задачу</option>
                   <option v-for="task in tasks" :key="task.id" :value="task.id">{{ task.title }}</option>
                 </select>
               </div>
-              <div class="mb-3">
+              <div class="col-md-6">
+                <label class="form-label" for="manualDescription">Описание</label>
+                <input id="manualDescription" class="form-control" v-model="manualEntry.description" placeholder="Опционально">
+              </div>
+              <div class="col-md-6">
                 <label class="form-label" for="manualStart">Начало</label>
                 <input id="manualStart" type="datetime-local" class="form-control" v-model="manualEntry.start_time" required>
               </div>
-              <div class="mb-3">
+              <div class="col-md-6">
                 <label class="form-label" for="manualEnd">Конец</label>
                 <input id="manualEnd" type="datetime-local" class="form-control" v-model="manualEntry.end_time" required>
               </div>
-              <div class="mb-3">
-                <label class="form-label" for="manualDescription">Описание</label>
-                <textarea id="manualDescription" class="form-control" rows="2" v-model="manualEntry.description"></textarea>
-              </div>
-              <button type="submit" class="btn btn-secondary w-100" :disabled="savingManual">
-                <span v-if="savingManual" class="spinner-border spinner-border-sm me-2" role="status"></span>
-                Сохранить вручную
-              </button>
-            </form>
-          </div>
-        </div>
-        <div class="card mt-4">
-          <div class="card-header">
-            <h5 class="mb-0">Pomodoro режим</h5>
-          </div>
-          <div class="card-body text-center">
-            <div class="pomodoro-time mb-3">{{ pomodoroDisplay }}</div>
-            <div class="btn-group w-100 mb-2">
-              <button class="btn btn-outline-success" @click="startPomodoro" :disabled="pomodoroRunning">Старт</button>
-              <button class="btn btn-outline-warning" @click="pausePomodoro" :disabled="!pomodoroRunning">Пауза</button>
-              <button class="btn btn-outline-secondary" @click="resetPomodoro">Сброс</button>
             </div>
-            <small class="text-muted">
-              {{ pomodoroWorkMode ? 'Фокус 25 минут' : 'Перерыв 5 минут' }}
-            </small>
-          </div>
+            <button type="submit" class="btn btn-outline-secondary w-100 mt-3" :disabled="savingManual">
+              <span v-if="savingManual" class="spinner-border spinner-border-sm me-2" role="status"></span>
+              Сохранить
+            </button>
+          </form>
+        </div>
+      </section>
+      </div>
+    </div>
+
+    <div v-if="showEditModal" class="modal-backdrop-custom">
+      <div class="modal-card">
+        <h5 class="mb-3">Редактирование записи времени</h5>
+        <div class="mb-2">
+          <label class="form-label">Задача</label>
+          <select class="form-select" v-model="editEntryForm.task">
+            <option v-for="task in tasks" :key="task.id" :value="task.id">{{ task.title }}</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Начало</label>
+          <input type="datetime-local" class="form-control" v-model="editEntryForm.start_time">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Конец</label>
+          <input type="datetime-local" class="form-control" v-model="editEntryForm.end_time">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Описание</label>
+          <textarea class="form-control" rows="2" v-model="editEntryForm.description"></textarea>
+        </div>
+        <div class="d-flex gap-2 justify-content-end">
+          <button class="btn btn-outline-secondary" @click="showEditModal = false">Отмена</button>
+          <button class="btn btn-primary" @click="saveEditedEntry">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showDeleteModal" class="modal-backdrop-custom">
+      <div class="modal-card">
+        <h5 class="mb-2">Удалить запись?</h5>
+        <p class="text-muted mb-3">Это действие нельзя отменить.</p>
+        <div class="d-flex gap-2 justify-content-end">
+          <button class="btn btn-outline-secondary" @click="showDeleteModal = false">Отмена</button>
+          <button class="btn btn-danger" @click="confirmDeleteEntry">Удалить</button>
         </div>
       </div>
     </div>
@@ -221,6 +231,16 @@ export default {
     const pomodoroRunning = ref(false)
     const pomodoroWorkMode = ref(true)
     let pomodoroInterval = null
+    const showEditModal = ref(false)
+    const showDeleteModal = ref(false)
+    const deleteEntryId = ref(null)
+    const editEntryForm = ref({
+      id: null,
+      task: '',
+      start_time: '',
+      end_time: '',
+      description: ''
+    })
     const pomodoroDisplay = computed(() => {
       const mm = Math.floor(pomodoroSeconds.value / 60).toString().padStart(2, '0')
       const ss = (pomodoroSeconds.value % 60).toString().padStart(2, '0')
@@ -288,33 +308,53 @@ export default {
       }
     }
 
-    const editTimeEntry = async (entry) => {
-      const newDescription = prompt('Изменить описание записи:', entry.description || '')
-      if (newDescription === null) return
+    const toLocalDateTime = (value) => {
+      if (!value) return ''
+      return new Date(value).toISOString().slice(0, 16)
+    }
+
+    const openEditEntry = (entry) => {
+      editEntryForm.value = {
+        id: entry.id,
+        task: entry.task.id,
+        start_time: toLocalDateTime(entry.start_time),
+        end_time: toLocalDateTime(entry.end_time),
+        description: entry.description || ''
+      }
+      showEditModal.value = true
+    }
+
+    const saveEditedEntry = async () => {
       try {
-        await api.updateTimeEntry(entry.id, {
-          task: entry.task.id,
-          start_time: entry.start_time,
-          end_time: entry.end_time,
-          description: newDescription
+        await api.updateTimeEntry(editEntryForm.value.id, {
+          task: Number(editEntryForm.value.task),
+          start_time: toIsoString(editEntryForm.value.start_time),
+          end_time: toIsoString(editEntryForm.value.end_time),
+          description: editEntryForm.value.description || ''
         })
         toast.success('Запись обновлена')
+        showEditModal.value = false
         await fetchTimeEntries()
       } catch (error) {
         toast.error('Ошибка обновления записи')
       }
     }
 
-    const deleteTimeEntry = async (id) => {
-      if (confirm('Вы уверены, что хотите удалить эту запись времени?')) {
-        try {
-          await api.deleteTimeEntry(id)
-          toast.success('Запись времени удалена')
-          await fetchTimeEntries()
-        } catch (error) {
-          toast.error('Ошибка удаления записи времени')
-          console.error('Error deleting time entry:', error)
-        }
+    const requestDeleteEntry = (id) => {
+      deleteEntryId.value = id
+      showDeleteModal.value = true
+    }
+
+    const confirmDeleteEntry = async () => {
+      try {
+        await api.deleteTimeEntry(deleteEntryId.value)
+        showDeleteModal.value = false
+        deleteEntryId.value = null
+        toast.success('Запись времени удалена')
+        await fetchTimeEntries()
+      } catch (error) {
+        toast.error('Ошибка удаления записи времени')
+        console.error('Error deleting time entry:', error)
       }
     }
 
@@ -464,10 +504,15 @@ export default {
       pomodoroDisplay,
       pomodoroRunning,
       pomodoroWorkMode,
+      showEditModal,
+      showDeleteModal,
+      editEntryForm,
       startNewTimer,
       stopTimer,
-      editTimeEntry,
-      deleteTimeEntry,
+      openEditEntry,
+      requestDeleteEntry,
+      saveEditedEntry,
+      confirmDeleteEntry,
       formatDate,
       formatDateTime,
       formatDuration,
@@ -482,55 +527,121 @@ export default {
 </script>
 
 <style scoped>
-.time-tracking-container {
-  max-width: 1400px;
+.time-page {
+  max-width: 1320px;
   margin: 0 auto;
 }
 
+.time-surface {
+  position: relative;
+  border-radius: 24px;
+  padding: 16px;
+  border: 1px solid rgba(224, 206, 232, 0.7);
+  background:
+    radial-gradient(circle at 10% 16%, rgba(245, 195, 210, 0.25), transparent 42%),
+    radial-gradient(circle at 94% 10%, rgba(213, 193, 246, 0.22), transparent 46%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(252, 241, 248, 0.66));
+  box-shadow: 0 16px 36px rgba(136, 110, 149, 0.12);
+  backdrop-filter: blur(10px);
+}
+
+.time-head {
+  margin-bottom: 14px;
+}
+
+.time-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.time-grid > section:nth-child(3),
+.time-grid > section:nth-child(5) {
+  grid-column: 1 / -1;
+}
+
 .active-timer {
-  padding: 20px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(236, 244, 255, 0.9) 100%);
-  border-radius: 14px;
-  border-left: 4px solid #7282ff;
-  border: 1px solid rgba(193, 208, 234, 0.8);
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(252, 241, 248, 0.92));
+  border-radius: 16px;
+  border: 1px solid rgba(219, 199, 230, 0.82);
+  border-left: 4px solid #9b7bff;
+}
+
+.active-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.task-name {
+  font-weight: 700;
+  color: #2a2f4d;
+  font-size: 1.05rem;
+}
+
+.task-meta {
+  color: #7a6991;
+  font-size: 0.85rem;
+}
+
+.active-desc {
+  color: #6f5d88;
+  margin-bottom: 10px;
 }
 
 .timer-display {
   font-family: 'Courier New', monospace;
-  color: #1a2944;
+  color: #1f2f57;
   text-align: center;
-  padding: 20px;
-  background-color: rgba(255, 255, 255, 0.85);
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(40, 68, 132, 0.08);
-  border: 1px solid rgba(198, 211, 236, 0.85);
+  padding: 16px;
+  background-color: rgba(255, 255, 255, 0.88);
+  border-radius: 14px;
+  border: 1px solid rgba(219, 199, 230, 0.75);
 }
 
-.no-active-timer {
-  color: #6c757d;
+.no-active {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px dashed rgba(220, 181, 214, 0.85);
+  border-radius: 14px;
+  color: #7a6991;
 }
 
-.table-responsive {
-  overflow-x: auto;
+.no-active i {
+  font-size: 1.2rem;
 }
 
-.table {
-  margin-bottom: 0;
+.no-title {
+  font-weight: 700;
+  color: #2a2f4d;
 }
 
-.table th {
-  background-color: rgba(245, 249, 255, 0.85);
-  border-bottom: 2px solid #d9e4f6;
+.no-sub {
+  font-size: 0.9rem;
 }
 
-.btn-danger {
-  background-color: #dc3545;
-  border-color: #dc3545;
+.loading-state {
+  display: flex;
+  justify-content: center;
+  padding: 18px 0;
 }
 
-.btn-danger:hover {
-  background-color: #c82333;
-  border-color: #bd2130;
+.empty-state {
+  text-align: center;
+  color: #7f6a8e;
+  padding: 14px 0;
+}
+
+.empty-state i {
+  font-size: 1.4rem;
+  margin-bottom: 6px;
+  opacity: 0.85;
 }
 
 .pomodoro-time {
@@ -538,11 +649,112 @@ export default {
   font-weight: 700;
   font-family: 'Courier New', monospace;
   color: #273b63;
+  text-align: center;
+}
+
+.pomodoro-sub {
+  text-align: center;
+  color: #7a6991;
+  margin-top: 2px;
+  margin-bottom: 12px;
+}
+
+.pomodoro-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.entry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.entry-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid rgba(226, 209, 236, 0.82);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 10px;
+}
+
+.entry-title {
+  font-weight: 700;
+  color: #2a2f4d;
+}
+
+.entry-sub {
+  color: #7a6991;
+  font-size: 0.86rem;
+  margin-top: 2px;
+}
+
+.entry-desc {
+  color: #6f5d88;
+  font-size: 0.9rem;
+  margin-top: 6px;
+}
+
+.entry-actions {
+  display: inline-flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(216, 198, 229, 0.9);
+  background: #ffffff;
+  color: #5f4b84;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn.danger {
+  color: #a33745;
+  border-color: rgba(255, 189, 199, 0.95);
+  background: rgba(255, 235, 238, 0.85);
+}
+
+.modal-backdrop-custom {
+  position: fixed;
+  inset: 0;
+  background: rgba(22, 30, 49, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 16px;
+}
+
+.modal-card {
+  width: min(520px, 100%);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(219, 199, 230, 0.9);
+  box-shadow: 0 18px 36px rgba(136, 110, 149, 0.22);
+  padding: 16px;
 }
 
 @media (max-width: 992px) {
-  .time-tracking-container {
+  .time-page {
     padding: 0 15px;
+  }
+
+  .time-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .time-grid > section:nth-child(3),
+  .time-grid > section:nth-child(5) {
+    grid-column: auto;
   }
 }
 </style>

@@ -1,10 +1,14 @@
 <template>
-  <div class="auth-container">
-    <div class="auth-card">
-      <div class="auth-header text-center mb-4">
-        <i class="fas fa-sign-in-alt fa-3x text-primary mb-3"></i>
-        <h2 class="h4">Вход в систему</h2>
-        <p class="text-muted">Войдите в свой аккаунт</p>
+  <div class="auth-shell page-shell">
+    <div class="auth-card card">
+      <div class="auth-header">
+        <div class="brand">
+          <span class="brand-icon"><i class="fas fa-check"></i></span>
+          <div>
+            <h2 class="h4 mb-0">Вход</h2>
+            <p class="section-subtitle mb-0">Добро пожаловать обратно</p>
+          </div>
+        </div>
       </div>
 
       <form @submit.prevent="handleSubmit" class="auth-form">
@@ -109,62 +113,69 @@ export default {
 </script>
 
 <style scoped>
-.auth-container {
+.auth-shell {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  padding: 20px;
+  min-height: calc(100vh - 170px);
+  padding: 18px;
 }
 
 .auth-card {
-  width: 100%;
-  max-width: 450px;
-  background: white;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  padding: 40px;
-  transition: all 0.3s ease;
+  width: min(520px, 100%);
 }
 
-.auth-card:hover {
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+.auth-card.card {
+  border-radius: 18px;
+  overflow: hidden;
 }
 
 .auth-header {
-  color: #333;
+  padding: 16px 16px 8px;
 }
 
-.auth-header i {
-  color: #42b983;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.form-control:focus {
-  border-color: #42b983;
-  box-shadow: 0 0 0 0.25rem rgba(66, 185, 131, 0.25);
+.brand-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+  box-shadow: 0 12px 22px rgba(136, 110, 149, 0.22);
 }
 
-.btn-primary {
-  background-color: #42b983;
-  border-color: #42b983;
-  padding: 10px;
-  font-weight: 500;
-}
-
-.btn-primary:hover {
-  background-color: #3aa876;
-  border-color: #3aa876;
+.auth-form {
+  padding: 12px 16px 16px;
 }
 
 .input-group-text {
-  background-color: #f8f9fa;
+  border-radius: 12px 0 0 12px;
+  border-color: rgba(219, 199, 230, 0.85);
+  background: rgba(255, 255, 255, 0.92);
+  color: #6f5d88;
+}
+
+.input-group .form-control {
+  border-left: 0;
+  border-radius: 0 12px 12px 0;
+}
+
+.input-group-text {
   border-right: 0;
 }
 
 @media (max-width: 576px) {
-  .auth-card {
-    padding: 30px 20px;
+  .auth-shell {
+    min-height: auto;
+    padding: 12px;
   }
 }
 </style>

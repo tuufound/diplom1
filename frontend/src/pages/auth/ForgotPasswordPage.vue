@@ -1,10 +1,14 @@
 <template>
-  <div class="auth-container">
-    <div class="auth-card">
-      <div class="auth-header text-center mb-4">
-        <i class="fas fa-key fa-3x text-primary mb-3"></i>
-        <h2 class="h4">Восстановление пароля</h2>
-        <p class="text-muted">Введите данные аккаунта и новый пароль</p>
+  <div class="auth-shell page-shell">
+    <div class="auth-card card">
+      <div class="auth-header">
+        <div class="brand">
+          <span class="brand-icon"><i class="fas fa-key"></i></span>
+          <div>
+            <h2 class="h4 mb-0">Сброс пароля</h2>
+            <p class="section-subtitle mb-0">Обнови пароль и вернись к работе</p>
+          </div>
+        </div>
       </div>
 
       <form @submit.prevent="handleSubmit">
@@ -88,6 +92,43 @@ export default {
 </script>
 
 <style scoped>
-.auth-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-.auth-card { width: 100%; max-width: 460px; background: #fff; border-radius: 12px; padding: 32px; box-shadow: 0 10px 24px rgba(0,0,0,.1); }
+.auth-shell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 170px);
+  padding: 18px;
+}
+
+.auth-card {
+  width: min(540px, 100%);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.auth-header {
+  padding: 16px 16px 8px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+  box-shadow: 0 12px 22px rgba(136, 110, 149, 0.22);
+}
+
+form {
+  padding: 12px 16px 16px;
+}
 </style>

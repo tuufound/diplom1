@@ -8,6 +8,11 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/time',
+    redirect: '/time-tracking',
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('@/pages/auth/LoginPage.vue'),

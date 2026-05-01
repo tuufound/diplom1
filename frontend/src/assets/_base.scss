@@ -13,20 +13,20 @@ body {
   font-family: $font-family-base;
   font-size: $font-size-base;
   line-height: $line-height-base;
-  color: $dark;
-  background-color: $light;
+  color: var(--text-main);
+  background-color: var(--bg-soft);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 // Links
 a {
-  color: $primary;
+  color: var(--brand-b);
   text-decoration: none;
   @include transition(color);
 
   &:hover {
-    color: darken($primary, 10%);
+    color: var(--brand-a);
     text-decoration: none;
   }
 }
@@ -37,7 +37,7 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: $spacing-unit;
   font-weight: 500;
   line-height: 1.2;
-  color: $dark;
+  color: var(--text-main);
 }
 
 // Buttons
@@ -55,20 +55,20 @@ h1, h2, h3, h4, h5, h6 {
   @include transition(border-color, box-shadow);
 
   &:focus {
-    border-color: $primary;
-    box-shadow: 0 0 0 0.25rem rgba($primary, 0.25);
+    border-color: var(--brand-b);
+    box-shadow: var(--focus-ring);
   }
 }
 
 // Cards
 .card {
-  border: none;
+  border: 1px solid var(--glass-border);
   border-radius: $border-radius-lg;
-  box-shadow: $box-shadow;
-  @include transition($box-shadow);
+  box-shadow: var(--shadow-soft);
+  @include transition(box-shadow);
 
   &:hover {
-    box-shadow: $box-shadow-lg;
+    box-shadow: var(--shadow-hover);
   }
 }
 

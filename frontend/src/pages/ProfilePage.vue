@@ -1,11 +1,23 @@
 <template>
-  <div class="profile-container">
-    <div class="row">
+  <div class="profile-page page-shell">
+    <div class="profile-head">
+      <div>
+        <h2 class="page-title"><i class="fas fa-user me-2"></i>Профиль</h2>
+        <p class="section-subtitle">Аккаунт, статистика и настройки — в одном месте.</p>
+      </div>
+      <button class="btn btn-outline-danger" @click="logout">
+        <i class="fas fa-sign-out-alt me-1"></i> Выйти
+      </button>
+    </div>
+
+    <div class="row g-4">
       <div class="col-lg-4">
         <div class="card mb-4">
           <div class="card-body text-center">
             <div class="profile-avatar mb-3">
-              <i class="fas fa-user-circle fa-5x text-primary"></i>
+              <span class="avatar">
+                <i class="fas fa-user"></i>
+              </span>
             </div>
             <h4 class="mb-1">{{ user?.username }}</h4>
             <p class="text-muted mb-3">{{ user?.email }}</p>
@@ -13,15 +25,15 @@
               <button class="btn btn-outline-primary btn-sm" disabled>
                 <i class="fas fa-edit me-1"></i> Редактировать профиль
               </button>
-              <button class="btn btn-outline-danger btn-sm" @click="logout">
-                <i class="fas fa-sign-out-alt me-1"></i> Выйти
-              </button>
+              <router-link class="btn btn-primary btn-sm" to="/tasks">
+                <i class="fas fa-list-check me-1"></i> К задачам
+              </router-link>
             </div>
           </div>
         </div>
 
         <div class="card mb-4">
-          <div class="card-header bg-primary text-white">
+          <div class="card-header">
             <h5 class="mb-0">Статистика</h5>
           </div>
           <div class="card-body">
@@ -47,7 +59,7 @@
 
       <div class="col-lg-8">
         <div class="card mb-4">
-          <div class="card-header bg-primary text-white">
+          <div class="card-header">
             <h5 class="mb-0">Недавняя активность</h5>
           </div>
           <div class="card-body">
@@ -75,7 +87,7 @@
         </div>
 
         <div class="card">
-          <div class="card-header bg-primary text-white">
+          <div class="card-header">
             <h5 class="mb-0">Настройки</h5>
           </div>
           <div class="card-body">
@@ -106,6 +118,40 @@
     </div>
   </div>
 </template>
+
+<style scoped>
+.profile-page {
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.profile-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.avatar {
+  width: 84px;
+  height: 84px;
+  border-radius: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+  box-shadow: 0 16px 28px rgba(136, 110, 149, 0.22);
+  font-size: 1.6rem;
+}
+
+@media (max-width: 768px) {
+  .profile-head {
+    flex-direction: column;
+  }
+}
+</style>
 
 <script>
 import { ref, computed, onMounted } from 'vue'

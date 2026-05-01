@@ -1,25 +1,35 @@
 <template>
   <div class="task-form-container page-shell">
-    <div class="card">
-      <div class="card-header">
-        <h4 class="mb-0">
+    <div class="form-head">
+      <div>
+        <h2 class="page-title">
           <i class="fas" :class="isEditing ? 'fa-edit' : 'fa-plus'"></i>
-          {{ isEditing ? 'Редактировать задачу' : 'Создать новую задачу' }}
-        </h4>
-        <p class="section-subtitle mt-2 mb-0">Новый стиль формы: минимум шума, максимум читаемости.</p>
+          {{ isEditing ? 'Редактирование' : 'Новая задача' }}
+        </h2>
+        <p class="section-subtitle">Заполни только важное — остальное можно добавить позже.</p>
       </div>
-      <div class="card-body">
-        <form @submit.prevent="handleSubmit">
+      <div class="form-head-actions">
+        <button type="button" class="btn btn-outline-secondary" @click="cancel">
+          <i class="fas fa-arrow-left me-1"></i> К списку
+        </button>
+      </div>
+    </div>
+
+    <form class="form-grid" @submit.prevent="handleSubmit">
+      <div class="card form-card">
+        <div class="card-body">
+          <div class="form-section-title">Основное</div>
           <div class="mb-3">
-            <label for="title" class="form-label">Название задачи</label>
+            <label for="title" class="form-label">Название</label>
             <input
               type="text"
               class="form-control"
               id="title"
               v-model="form.title"
-              placeholder="Введите название задачи"
+              placeholder="Например: Подготовить отчет"
               required
             >
+            <small class="form-help">Коротко: так задачу проще найти.</small>
           </div>
 
           <div class="mb-3">
@@ -29,11 +39,16 @@
               id="description"
               v-model="form.description"
               rows="4"
-              placeholder="Введите описание задачи"
+              placeholder="Контекст, критерии готовности, ссылки…"
             ></textarea>
           </div>
+        </div>
+      </div>
 
-          <div class="row mb-3">
+      <div class="card form-card">
+        <div class="card-body">
+          <div class="form-section-title">Статус и приоритет</div>
+          <div class="row g-3">
             <div class="col-md-6">
               <label for="status" class="form-label">Статус</label>
               <select class="form-select" id="status" v-model="form.status" required>
@@ -46,7 +61,7 @@
             <div class="col-md-6">
               <label for="priority" class="form-label">Приоритет</label>
               <select class="form-select" id="priority" v-model="form.priority">
-                <option value="">Выберите приоритет</option>
+                <option value="">Без приоритета</option>
                 <option v-for="priority in priorities" :key="priority.id" :value="priority.id">
                   {{ priority.name }}
                 </option>
@@ -54,7 +69,10 @@
             </div>
           </div>
 
-          <div class="row mb-3">
+          <div class="divider"></div>
+
+          <div class="form-section-title">Контекст</div>
+          <div class="row g-3">
             <div class="col-md-6">
               <label for="project" class="form-label">Проект</label>
               <select class="form-select" id="project" v-model="form.project">
@@ -67,23 +85,14 @@
             <div class="col-md-6">
               <label for="category" class="form-label">Категория</label>
               <select class="form-select" id="category" v-model="form.category">
-                <option value="">Выберите категорию</option>
+                <option value="">Без категории</option>
                 <option v-for="category in categories" :key="category.id" :value="category.id">
-                  {{ category.name }}
-                </option>
-              </select>
-            </div>
-            <div class="col-md-6 mt-3 mt-md-0">
-              <label for="parent_task" class="form-label">Родительская задача</label>
-              <select class="form-select" id="parent_task" v-model="form.parent_task">
-                <option value="">Без родительской задачи</option>
-                <option v-for="task in availableParentTasks" :key="task.id" :value="task.id">
-                  {{ task.title }}
+                  {{ category.icon || '📁' }} {{ category.name }}
                 </option>
               </select>
             </div>
             <div class="col-md-6">
-              <label for="due_date" class="form-label">Срок выполнения</label>
+              <label for="due_date" class="form-label">Срок</label>
               <input
                 type="datetime-local"
                 class="form-control"
@@ -91,25 +100,40 @@
                 v-model="form.due_date"
               >
             </div>
+            <div class="col-md-6">
+              <label for="parent_task" class="form-label">Родитель</label>
+              <select class="form-select" id="parent_task" v-model="form.parent_task">
+                <option value="">Без родительской задачи</option>
+                <option v-for="task in availableParentTasks" :key="task.id" :value="task.id">
+                  {{ task.title }}
+                </option>
+              </select>
+              <small class="form-help">Если это подзадача — выбери родителя.</small>
+            </div>
           </div>
 
-          <div class="mb-3 form-check">
+          <div class="divider"></div>
+
+          <div class="form-section-title">Активность</div>
+          <div class="form-check">
             <input type="checkbox" class="form-check-input" id="is_active" v-model="form.is_active">
             <label class="form-check-label" for="is_active">Активная задача</label>
           </div>
-
-          <div class="d-flex gap-2 mt-4">
-            <button type="submit" class="btn btn-primary" :disabled="loading">
-              <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
-              <span>{{ isEditing ? 'Сохранить' : 'Создать' }}</span>
-            </button>
-            <button type="button" class="btn btn-outline-secondary" @click="cancel">
-              Отмена
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
-    </div>
+
+      <div class="card form-actions">
+        <div class="card-body action-bar">
+          <button type="submit" class="btn btn-primary" :disabled="loading">
+            <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+            <span>{{ isEditing ? 'Сохранить' : 'Создать' }}</span>
+          </button>
+          <button type="button" class="btn btn-outline-secondary" @click="cancel">
+            Отмена
+          </button>
+        </div>
+      </div>
+    </form>
   </div>
 </template>
 
@@ -267,50 +291,80 @@ export default {
 
 <style scoped>
 .task-form-container {
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
-.card {
-  border: 1px solid rgba(188, 204, 233, 0.9);
-  box-shadow: 0 12px 30px rgba(35, 63, 123, 0.11);
-  border-radius: 18px;
-  overflow: hidden;
+.form-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
-.card-header {
-  padding: 1.5rem;
-  font-size: 1.25rem;
+.form-head-actions {
+  display: inline-flex;
+  gap: 8px;
 }
 
-.card-body {
-  padding: 2rem;
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
 }
 
 .form-label {
   font-weight: 600;
   margin-bottom: 0.5rem;
-  color: #1b2a46;
+  color: #29314f;
+}
+
+.form-section-title {
+  font-size: 0.92rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6f5d88;
+  margin-bottom: 10px;
+}
+
+.form-help {
+  color: #7a6991;
+  font-size: 0.78rem;
 }
 
 .form-control, .form-select {
   border-radius: 12px;
-  border: 1px solid #c6d3ed;
+  border: 1px solid rgba(219, 199, 230, 0.85);
   padding: 0.75rem 1rem;
   transition: all 0.2s ease;
 }
 
 .form-control:focus, .form-select:focus {
-  border-color: #8aa7ff;
-  box-shadow: 0 0 0 0.22rem rgba(119, 146, 255, 0.22);
+  border-color: rgba(168, 132, 206, 0.9);
+  box-shadow: 0 0 0 0.22rem rgba(176, 131, 200, 0.24);
 }
 
-.btn-primary {
-  padding: 0.75rem 1.5rem;
+.form-card .card-body {
+  padding: 16px;
 }
 
-.btn-outline-secondary {
-  padding: 0.75rem 1.5rem;
+.divider {
+  height: 1px;
+  background: rgba(224, 206, 232, 0.7);
+  margin: 14px 0;
+}
+
+.form-actions {
+  grid-column: 1 / -1;
+}
+
+.action-bar {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 12px 14px;
 }
 
 @media (max-width: 768px) {
@@ -318,12 +372,28 @@ export default {
     padding: 0 15px;
   }
 
-  .d-flex.gap-2 {
-    flex-direction: column;
+  .form-grid {
+    grid-template-columns: 1fr;
   }
 
   .btn {
     width: 100%;
   }
+
+  .action-bar {
+    position: sticky;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.96);
+    border-top: 1px solid rgba(224, 206, 232, 0.7);
+    margin: -2px -2px -2px;
+    padding: 12px 12px;
+    z-index: 2;
+    border-radius: 0 0 16px 16px;
+  }
+
+  .form-head {
+    flex-direction: column;
+  }
+
 }
 </style>

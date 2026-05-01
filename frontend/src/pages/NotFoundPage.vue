@@ -1,13 +1,14 @@
 <template>
-  <div class="not-found-container">
-    <div class="not-found-content text-center">
-      <i class="fas fa-exclamation-triangle fa-5x text-warning mb-4"></i>
-      <h1 class="display-1 fw-bold">404</h1>
-      <h2 class="mb-3">Страница не найдена</h2>
-      <p class="text-muted mb-4">Извините, запрашиваемая страница не существует.</p>
-      <router-link to="/tasks" class="btn btn-primary btn-lg">
-        <i class="fas fa-home me-2"></i>Вернуться на главную
-      </router-link>
+  <div class="nf-shell page-shell">
+    <div class="card nf-card">
+      <div class="card-body text-center">
+        <div class="nf-badge">404</div>
+        <h2 class="mb-2">Страница не найдена</h2>
+        <p class="section-subtitle mb-4">Похоже, ссылка устарела или была введена с ошибкой.</p>
+        <router-link to="/tasks" class="btn btn-primary">
+          <i class="fas fa-home me-2"></i>К задачам
+        </router-link>
+      </div>
     </div>
   </div>
 </template>
@@ -19,59 +20,37 @@ export default {
 </script>
 
 <style scoped>
-.not-found-container {
+.nf-shell {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  padding: 20px;
+  min-height: calc(100vh - 170px);
+  padding: 18px;
 }
 
-.not-found-content {
-  max-width: 600px;
-  padding: 40px;
-  background: white;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  animation: fadeIn 0.5s ease-in-out;
+.nf-card {
+  width: min(640px, 100%);
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.display-1 {
-  font-size: 5rem;
-  color: #6c757d;
-}
-
-.btn-primary {
-  background-color: #42b983;
-  border-color: #42b983;
-  padding: 12px 24px;
-  font-size: 1.1rem;
-}
-
-.btn-primary:hover {
-  background-color: #3aa876;
-  border-color: #3aa876;
+.nf-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 86px;
+  height: 86px;
+  border-radius: 26px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+  box-shadow: 0 16px 30px rgba(136, 110, 149, 0.24);
+  font-weight: 800;
+  font-size: 1.5rem;
+  margin-bottom: 14px;
 }
 
 @media (max-width: 576px) {
-  .not-found-content {
-    padding: 30px 20px;
-  }
-
-  .display-1 {
-    font-size: 4rem;
+  .nf-shell {
+    min-height: auto;
+    padding: 12px;
   }
 }
 </style>

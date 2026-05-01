@@ -60,6 +60,7 @@ class ProjectMembership(models.Model):
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
+    icon = models.CharField(max_length=8, default="📁")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

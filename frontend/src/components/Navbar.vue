@@ -6,7 +6,7 @@
         Task Planner
       </router-link>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
+        <i class="fas fa-bars"></i>
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav me-auto">
@@ -28,6 +28,11 @@
           <li class="nav-item">
             <router-link class="nav-link" to="/reports">
               <i class="fas fa-chart-bar me-1"></i> Отчеты
+            </router-link>
+          </li>
+          <li class="nav-item">
+            <router-link class="nav-link" to="/profile">
+              <i class="fas fa-user me-1"></i> Профиль
             </router-link>
           </li>
         </ul>
@@ -73,19 +78,23 @@ export default {
 
 <style scoped>
 .app-navbar {
-  margin-bottom: 14px;
-  border: 1px solid rgba(193, 207, 234, 0.9);
+  position: sticky;
+  top: 10px;
+  z-index: 100;
+  margin: 8px auto 14px;
+  max-width: 1420px;
+  border: 1px solid rgba(224, 206, 232, 0.8);
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(235, 243, 255, 0.85) 100%);
-  box-shadow: 0 8px 24px rgba(35, 63, 124, 0.08);
-  backdrop-filter: blur(8px);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(252, 241, 248, 0.88) 100%);
+  box-shadow: 0 12px 24px rgba(131, 102, 146, 0.18);
+  backdrop-filter: blur(10px);
 }
 
 .navbar-brand {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #1a2741;
+  color: #293a65;
   font-weight: 700;
 }
 
@@ -97,45 +106,79 @@ export default {
   justify-content: center;
   border-radius: 10px;
   color: #fff;
-  background: linear-gradient(135deg, #637dff 0%, #7a56ff 100%);
+  background: linear-gradient(135deg, #f35db5 0%, #8b7aff 100%);
 }
 
 .nav-link {
   transition: all 0.2s ease;
   border-radius: 10px;
-  color: #33425f !important;
+  color: #5a4d7e !important;
   padding: 8px 12px !important;
+  border: 1px solid transparent;
 }
 
 .nav-link:hover {
-  color: #1e2e4d !important;
-  background: rgba(120, 145, 224, 0.15);
+  color: #2f3f6d !important;
+  background: rgba(244, 232, 249, 0.9);
+  border-color: rgba(219, 199, 230, 0.72);
+  transform: translateY(-1px);
 }
 
 .nav-link.router-link-active {
-  color: #182643 !important;
+  color: #2f3f6d !important;
   font-weight: 600;
-  background: rgba(125, 145, 229, 0.22);
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(219, 199, 230, 0.74);
 }
 
 .btn-outline-light {
-  border-color: #b7c8e9;
-  color: #2c3d60;
-  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(219, 199, 230, 0.74);
+  color: #5d4e81;
+  background: rgba(255, 255, 255, 0.86);
 }
 
 .user-chip {
   padding: 7px 10px;
   border-radius: 999px;
-  border: 1px solid #c7d5ef;
-  color: #2c3d60;
+  border: 1px solid rgba(220, 202, 231, 0.78);
+  color: #5d4f80;
   font-size: 0.9rem;
   background: rgba(255, 255, 255, 0.78);
 }
 
 .btn-outline-light:hover {
-  background: #edf3ff;
-  border-color: #9cb4e0;
-  color: #223252;
+  background: rgba(248, 238, 252, 0.95);
+  border-color: rgba(207, 181, 221, 0.86);
+  color: #4f4370;
+}
+
+.navbar-toggler {
+  border-color: rgba(220, 202, 231, 0.78);
+  color: #5d4f80;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.navbar-toggler:focus {
+  box-shadow: 0 0 0 0.2rem rgba(179, 128, 205, 0.22);
+}
+
+@media (max-width: 992px) {
+  .app-navbar {
+    top: 0;
+    margin: 0 0 10px;
+    border-radius: 0 0 16px 16px;
+  }
+
+  .navbar-collapse {
+    padding-top: 10px;
+  }
+
+  .navbar-nav .nav-link {
+    margin-bottom: 6px;
+  }
+
+  .user-chip {
+    display: none;
+  }
 }
 </style>

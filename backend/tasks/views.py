@@ -166,7 +166,9 @@ class TaskListCreateView(generics.ListCreateAPIView):
     serializer_class = TaskSerializer
 
     def get_queryset(self):
-        return Task.objects.filter(
+        return Task.objects.select_related(
+            "project", "category", "priority", "parent_task", "user"
+        ).filter(
             Q(user=self.request.user) | Q(project__memberships__user=self.request.user)
         ).distinct()
 
@@ -190,7 +192,9 @@ class TaskRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TaskSerializer
 
     def get_queryset(self):
-        return Task.objects.filter(
+        return Task.objects.select_related(
+            "project", "category", "priority", "parent_task", "user"
+        ).filter(
             Q(user=self.request.user) | Q(project__memberships__user=self.request.user)
         ).distinct()
 

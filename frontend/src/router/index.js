@@ -32,6 +32,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/kanban',
+    name: 'Kanban',
+    component: () => import('@/pages/tasks/TaskBoardPage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/tasks/create',
     name: 'CreateTask',
     component: () => import('@/pages/tasks/TaskFormPage.vue'),

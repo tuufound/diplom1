@@ -16,6 +16,11 @@
             </router-link>
           </li>
           <li class="nav-item">
+            <router-link class="nav-link" to="/kanban">
+              <i class="fas fa-table-columns me-1"></i> Канбан
+            </router-link>
+          </li>
+          <li class="nav-item">
             <router-link class="nav-link" to="/time-tracking">
               <i class="fas fa-clock me-1"></i> Таймер
             </router-link>

@@ -108,6 +108,13 @@ class Task(models.Model):
     )
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, blank=True, null=True, related_name='tasks')
     priority = models.ForeignKey(Priority, on_delete=models.SET_NULL, blank=True, null=True, related_name='tasks')
+    parent_task = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="subtasks",
+    )
     is_active = models.BooleanField(default=True)
 
     class Meta:

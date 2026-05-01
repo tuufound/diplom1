@@ -41,39 +41,54 @@
         Добавить задачу
       </router-link>
 
-      <div v-if="filteredTasks.length === 0" class="empty-state">
+      <div v-if="visibleTasks.length === 0" class="empty-state">
         <i class="fas fa-inbox"></i>
         <p>Задачи не найдены</p>
       </div>
 
       <div v-else class="task-rows">
         <article
-          v-for="task in filteredTasks"
-          :key="task.id"
+          v-for="item in visibleTasks"
+          :key="item.task.id"
           class="task-row"
-          :class="getRowClass(task)"
-          @click="goToTaskDetail(task.id)"
+          :class="[getRowClass(item.task), { 'is-child': item.isChild }]"
+          @click="goToTaskDetail(item.task.id)"
         >
           <div class="task-main">
-            <h6 class="task-title">{{ task.title }}</h6>
-            <p class="task-sub">{{ truncateText(task.description, 90) }}</p>
+            <div class="title-row">
+              <button
+                v-if="hasSubtasks(item.task.id)"
+                class="collapse-btn"
+                type="button"
+                @click.stop="toggleSubtasks(item.task.id)"
+              >
+                <i class="fas" :class="isExpanded(item.task.id) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+              </button>
+              <span v-else class="collapse-placeholder"></span>
+              <h6 class="task-title">{{ item.task.title }}</h6>
+            </div>
+            <p class="task-sub">{{ truncateText(item.task.description, 90) }}</p>
             <div class="chips">
-              <span class="chip muted"><i class="far fa-calendar-alt"></i> {{ formatDate(task.created_at) }}</span>
-              <span v-if="task.project" class="chip"><i class="fas fa-briefcase"></i> {{ task.project.name }}</span>
-              <span v-if="task.category" class="chip"><i class="far fa-folder"></i> {{ task.category.name }}</span>
-              <span v-if="task.priority" class="chip danger"><i class="fas fa-flag"></i> {{ task.priority.name }}</span>
+              <span class="chip muted"><i class="far fa-calendar-alt"></i> {{ formatDate(item.task.created_at) }}</span>
+              <span v-if="item.task.project" class="chip"><i class="fas fa-briefcase"></i> {{ item.task.project.name }}</span>
+              <span v-if="item.task.category" class="chip"><i class="far fa-folder"></i> {{ item.task.category.name }}</span>
+              <span v-if="item.task.priority" class="chip danger"><i class="fas fa-flag"></i> {{ item.task.priority.name }}</span>
+              <span v-if="item.isChild" class="chip child"><i class="fas fa-level-down-alt"></i> Подзадача</span>
             </div>
           </div>
           <div class="task-actions">
-            <button class="icon-btn" @click.stop="toggleTimeTracking(task)" :disabled="!task.can_edit">
-              <i class="fas" :class="getTimeTrackingIcon(task)"></i>
+            <button class="icon-btn" @click.stop="toggleTimeTracking(item.task)" :disabled="!item.task.can_edit">
+              <i class="fas" :class="getTimeTrackingIcon(item.task)"></i>
             </button>
-            <button class="icon-btn" @click.stop="editTask(task.id)" :disabled="!task.can_edit">
+            <button class="icon-btn" @click.stop="editTask(item.task.id)" :disabled="!item.task.can_edit">
               <i class="fas fa-pen"></i>
             </button>
-            <button class="icon-btn danger" @click.stop="deleteTask(task.id)" :disabled="!task.can_edit">
+            <button class="icon-btn danger" @click.stop="deleteTask(item.task.id)" :disabled="!item.task.can_edit">
               <i class="fas fa-trash"></i>
             </button>
+            <router-link class="icon-btn" :to="`/tasks/create?parent=${item.task.id}`" title="Создать подзадачу">
+              <i class="fas fa-code-branch"></i>
+            </router-link>
           </div>
         </article>
       </div>
@@ -102,6 +117,7 @@ export default {
     const loading = ref(false)
     const currentDate = ref(new Date())
     const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+    const expandedParents = ref({})
 
     const fetchTasks = async () => {
       try {
@@ -135,6 +151,35 @@ export default {
     }
 
     const filteredTasks = computed(() => tasks.value)
+    const tasksByParent = computed(() => {
+      const map = {}
+      for (const task of tasks.value) {
+        const parentId = task.parent_task?.id || null
+        if (!map[parentId]) {
+          map[parentId] = []
+        }
+        map[parentId].push(task)
+      }
+      return map
+    })
+    const visibleTasks = computed(() => {
+      const result = []
+      const knownIds = new Set(tasks.value.map(task => task.id))
+      const parents = [
+        ...(tasksByParent.value[null] || []),
+        ...tasks.value.filter(task => task.parent_task?.id && !knownIds.has(task.parent_task.id))
+      ]
+      for (const parent of parents) {
+        result.push({ task: parent, isChild: false })
+        if (expandedParents.value[parent.id]) {
+          const subtasks = tasksByParent.value[parent.id] || []
+          for (const subtask of subtasks) {
+            result.push({ task: subtask, isChild: true })
+          }
+        }
+      }
+      return result
+    })
     const monthLabel = computed(() => format(currentDate.value, 'LLLL yyyy', { locale: ru }))
     const calendarDays = computed(() => {
       const startMonth = startOfMonth(currentDate.value)
@@ -258,6 +303,21 @@ export default {
       return getActiveEntry(task.id) ? 'fa-stop' : 'fa-play'
     }
 
+    const hasSubtasks = (taskId) => {
+      return (tasksByParent.value[taskId] || []).length > 0
+    }
+
+    const isExpanded = (taskId) => {
+      return !!expandedParents.value[taskId]
+    }
+
+    const toggleSubtasks = (taskId) => {
+      expandedParents.value = {
+        ...expandedParents.value,
+        [taskId]: !expandedParents.value[taskId]
+      }
+    }
+
     const getRowClass = (task) => {
       const map = {
         todo: 'row-todo',
@@ -294,6 +354,7 @@ export default {
       timeEntries,
       loading,
       filteredTasks,
+      visibleTasks,
       monthLabel,
       weekDays,
       calendarDays,
@@ -311,6 +372,9 @@ export default {
       getTimeTrackingIcon,
       toggleTimeTracking,
       getRowClass,
+      hasSubtasks,
+      isExpanded,
+      toggleSubtasks,
       isCurrentMonth,
       isToday,
       format
@@ -448,6 +512,30 @@ export default {
   color: #1e2f4b;
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.collapse-btn {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #c3d1eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #36507b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collapse-placeholder {
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+}
+
 .task-sub {
   margin: 0 0 7px 0;
   color: #5f7193;
@@ -479,10 +567,21 @@ export default {
   color: #6a7c9f;
 }
 
+.chip.child {
+  background: #edf6ff;
+  border-color: #b9daf9;
+  color: #2d5982;
+}
+
 .task-actions {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.task-row.is-child {
+  margin-left: 28px;
+  border-style: dashed;
 }
 
 .icon-btn {

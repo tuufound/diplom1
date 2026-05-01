@@ -73,6 +73,15 @@
                 </option>
               </select>
             </div>
+            <div class="col-md-6 mt-3 mt-md-0">
+              <label for="parent_task" class="form-label">Родительская задача</label>
+              <select class="form-select" id="parent_task" v-model="form.parent_task">
+                <option value="">Без родительской задачи</option>
+                <option v-for="task in availableParentTasks" :key="task.id" :value="task.id">
+                  {{ task.title }}
+                </option>
+              </select>
+            </div>
             <div class="col-md-6">
               <label for="due_date" class="form-label">Срок выполнения</label>
               <input
@@ -124,6 +133,7 @@ export default {
       priority: '',
       project: '',
       category: '',
+      parent_task: '',
       due_date: '',
       is_active: true
     })
@@ -133,6 +143,11 @@ export default {
     const projects = ref([])
     const loading = ref(false)
     const isEditing = computed(() => !!route.params.id)
+    const allTasks = ref([])
+    const availableParentTasks = computed(() => {
+      const currentTaskId = isEditing.value ? Number(route.params.id) : null
+      return allTasks.value.filter((task) => task.id !== currentTaskId)
+    })
 
     const fetchTask = async () => {
       if (isEditing.value) {
@@ -146,6 +161,7 @@ export default {
             priority: task.priority?.id || '',
             project: task.project?.id || '',
             category: task.category?.id || '',
+            parent_task: task.parent_task?.id || '',
             due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : '',
             is_active: task.is_active
           }
@@ -183,6 +199,15 @@ export default {
       }
     }
 
+    const fetchAllTasks = async () => {
+      try {
+        const response = await api.getTasks()
+        allTasks.value = response.data
+      } catch (error) {
+        console.error('Error fetching tasks for parent select:', error)
+      }
+    }
+
     const handleSubmit = async () => {
       try {
         loading.value = true
@@ -191,6 +216,7 @@ export default {
           priority: form.value.priority ? Number(form.value.priority) : null,
           project: form.value.project ? Number(form.value.project) : null,
           category: form.value.category ? Number(form.value.category) : null,
+          parent_task: form.value.parent_task ? Number(form.value.parent_task) : null,
           due_date: form.value.due_date ? new Date(form.value.due_date).toISOString() : null
         }
         if (isEditing.value) {
@@ -214,10 +240,14 @@ export default {
     }
 
     onMounted(() => {
+      if (!isEditing.value && route.query.parent) {
+        form.value.parent_task = Number(route.query.parent)
+      }
       fetchTask()
       fetchPriorities()
       fetchCategories()
       fetchProjects()
+      fetchAllTasks()
     })
 
     return {
@@ -225,6 +255,7 @@ export default {
       priorities,
       categories,
       projects,
+      availableParentTasks,
       loading,
       isEditing,
       handleSubmit,

@@ -83,6 +83,9 @@ class TaskSerializer(serializers.ModelSerializer):
     priority = serializers.PrimaryKeyRelatedField(
         queryset=Priority.objects.all(), allow_null=True, required=False
     )
+    parent_task = serializers.PrimaryKeyRelatedField(
+        queryset=Task.objects.all(), allow_null=True, required=False
+    )
 
     class Meta:
         model = Task
@@ -102,6 +105,7 @@ class TaskSerializer(serializers.ModelSerializer):
             "project",
             "category",
             "priority",
+            "parent_task",
         )
 
     def to_representation(self, instance):
@@ -115,7 +119,61 @@ class TaskSerializer(serializers.ModelSerializer):
         data["priority"] = (
             PrioritySerializer(instance.priority).data if instance.priority else None
         )
+        data["parent_task"] = (
+            {"id": instance.parent_task.id, "title": instance.parent_task.title}
+            if instance.parent_task
+            else None
+        )
         return data
+
+    def validate_parent_task(self, value):
+        request = self.context.get("request")
+        if not value or not request:
+            return value
+
+        if value.user_id == request.user.id:
+            return value
+
+        membership = ProjectMembership.objects.filter(
+            project=value.project,
+            user=request.user,
+        ).first()
+        if not membership:
+            raise serializers.ValidationError("Нет доступа к родительской задаче.")
+        return value
+
+    def validate(self, attrs):
+        instance = getattr(self, "instance", None)
+        parent_task = attrs.get("parent_task")
+        if parent_task is None and instance:
+            parent_task = instance.parent_task
+
+        if instance and parent_task and parent_task.id == instance.id:
+            raise serializers.ValidationError(
+                {"parent_task": "Задача не может быть родительской сама себе."}
+            )
+
+        if instance and parent_task:
+            current_parent = parent_task
+            while current_parent:
+                if current_parent.id == instance.id:
+                    raise serializers.ValidationError(
+                        {"parent_task": "Нельзя создавать циклическую иерархию задач."}
+                    )
+                current_parent = current_parent.parent_task
+
+        project = attrs.get("project")
+        if project is None and instance:
+            project = instance.project
+
+        if parent_task and parent_task.project_id != (project.id if project else None):
+            raise serializers.ValidationError(
+                {
+                    "parent_task": "Родительская задача должна быть из того же проекта или личного списка."
+                }
+            )
+
+        return attrs
 
     def get_access_role(self, obj):
         request = self.context.get("request")

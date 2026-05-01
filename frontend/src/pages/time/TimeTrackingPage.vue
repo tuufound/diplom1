@@ -29,42 +29,11 @@
           </div>
           <div v-else class="no-active">
             <i class="fas fa-clock"></i>
-            <div>
+            <div class="no-text">
               <div class="no-title">Нет активного таймера</div>
-              <div class="no-sub">Запусти таймер справа или из списка задач.</div>
+              <div class="no-sub">Запусти таймер из списка задач.</div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="card-header"><h5 class="mb-0">Запустить таймер</h5></div>
-        <div class="card-body">
-          <form @submit.prevent="startNewTimer" class="start-form">
-            <div class="mb-3">
-              <label for="task" class="form-label">Задача</label>
-              <select class="form-select" id="task" v-model="newTimer.task" required>
-                <option value="">Выберите задачу</option>
-                <option v-for="task in tasks" :key="task.id" :value="task.id">
-                  {{ task.title }}
-                </option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label for="description" class="form-label">Описание</label>
-              <textarea
-                class="form-control"
-                id="description"
-                v-model="newTimer.description"
-                rows="3"
-                placeholder="Коротко: чем занимаешься?"
-              ></textarea>
-            </div>
-            <button type="submit" class="btn btn-primary w-100" :disabled="startingTimer">
-              <span v-if="startingTimer" class="spinner-border spinner-border-sm me-2" role="status"></span>
-              <span>Старт</span>
-            </button>
-          </form>
         </div>
       </section>
 
@@ -77,6 +46,7 @@
           <div v-else-if="timeEntries.length === 0" class="empty-state">
             <i class="fas fa-history"></i>
             <p>История пуста</p>
+            <router-link to="/tasks" class="btn btn-outline-secondary btn-sm mt-2">Открыть задачи</router-link>
           </div>
           <div v-else class="entry-list">
             <article v-for="entry in timeEntries" :key="entry.id" class="entry-row">
@@ -87,14 +57,6 @@
                   · <strong>{{ formatDuration(entry.duration) }}</strong>
                 </div>
                 <div v-if="entry.description" class="entry-desc">{{ truncateText(entry.description, 80) }}</div>
-              </div>
-              <div class="entry-actions">
-                <button class="icon-btn" @click="openEditEntry(entry)" title="Редактировать">
-                  <i class="fas fa-pen"></i>
-                </button>
-                <button class="icon-btn danger" @click="requestDeleteEntry(entry.id)" title="Удалить">
-                  <i class="fas fa-trash"></i>
-                </button>
               </div>
             </article>
           </div>
@@ -116,79 +78,9 @@
         </div>
       </section>
 
-      <section class="card">
-        <div class="card-header"><h5 class="mb-0">Ручной ввод</h5></div>
-        <div class="card-body">
-          <form @submit.prevent="saveManualEntry">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label" for="manualTask">Задача</label>
-                <select id="manualTask" class="form-select" v-model="manualEntry.task" required>
-                  <option value="">Выберите задачу</option>
-                  <option v-for="task in tasks" :key="task.id" :value="task.id">{{ task.title }}</option>
-                </select>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" for="manualDescription">Описание</label>
-                <input id="manualDescription" class="form-control" v-model="manualEntry.description" placeholder="Опционально">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" for="manualStart">Начало</label>
-                <input id="manualStart" type="datetime-local" class="form-control" v-model="manualEntry.start_time" required>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" for="manualEnd">Конец</label>
-                <input id="manualEnd" type="datetime-local" class="form-control" v-model="manualEntry.end_time" required>
-              </div>
-            </div>
-            <button type="submit" class="btn btn-outline-secondary w-100 mt-3" :disabled="savingManual">
-              <span v-if="savingManual" class="spinner-border spinner-border-sm me-2" role="status"></span>
-              Сохранить
-            </button>
-          </form>
-        </div>
-      </section>
       </div>
     </div>
 
-    <div v-if="showEditModal" class="modal-backdrop-custom">
-      <div class="modal-card">
-        <h5 class="mb-3">Редактирование записи времени</h5>
-        <div class="mb-2">
-          <label class="form-label">Задача</label>
-          <select class="form-select" v-model="editEntryForm.task">
-            <option v-for="task in tasks" :key="task.id" :value="task.id">{{ task.title }}</option>
-          </select>
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Начало</label>
-          <input type="datetime-local" class="form-control" v-model="editEntryForm.start_time">
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Конец</label>
-          <input type="datetime-local" class="form-control" v-model="editEntryForm.end_time">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Описание</label>
-          <textarea class="form-control" rows="2" v-model="editEntryForm.description"></textarea>
-        </div>
-        <div class="d-flex gap-2 justify-content-end">
-          <button class="btn btn-outline-secondary" @click="showEditModal = false">Отмена</button>
-          <button class="btn btn-primary" @click="saveEditedEntry">Сохранить</button>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="showDeleteModal" class="modal-backdrop-custom">
-      <div class="modal-card">
-        <h5 class="mb-2">Удалить запись?</h5>
-        <p class="text-muted mb-3">Это действие нельзя отменить.</p>
-        <div class="d-flex gap-2 justify-content-end">
-          <button class="btn btn-outline-secondary" @click="showDeleteModal = false">Отмена</button>
-          <button class="btn btn-danger" @click="confirmDeleteEntry">Удалить</button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -207,19 +99,6 @@ export default {
     const timeEntries = ref([])
     const tasks = ref([])
     const loading = ref(false)
-    const startingTimer = ref(false)
-    const savingManual = ref(false)
-
-    const newTimer = ref({
-      task: '',
-      description: ''
-    })
-    const manualEntry = ref({
-      task: '',
-      start_time: '',
-      end_time: '',
-      description: ''
-    })
 
     const activeTimeEntry = computed(() => {
       return timeEntries.value.find(entry => !entry.end_time)
@@ -231,16 +110,6 @@ export default {
     const pomodoroRunning = ref(false)
     const pomodoroWorkMode = ref(true)
     let pomodoroInterval = null
-    const showEditModal = ref(false)
-    const showDeleteModal = ref(false)
-    const deleteEntryId = ref(null)
-    const editEntryForm = ref({
-      id: null,
-      task: '',
-      start_time: '',
-      end_time: '',
-      description: ''
-    })
     const pomodoroDisplay = computed(() => {
       const mm = Math.floor(pomodoroSeconds.value / 60).toString().padStart(2, '0')
       const ss = (pomodoroSeconds.value % 60).toString().padStart(2, '0')
@@ -270,31 +139,6 @@ export default {
       }
     }
 
-    const startNewTimer = async () => {
-      if (!newTimer.value.task) {
-        toast.error('Пожалуйста, выберите задачу')
-        return
-      }
-
-      try {
-        startingTimer.value = true
-        await api.startTimeEntry(newTimer.value.task, {
-          description: newTimer.value.description
-        })
-        toast.success('Таймер запущен')
-        await fetchTimeEntries()
-        newTimer.value = {
-          task: '',
-          description: ''
-        }
-      } catch (error) {
-        toast.error('Ошибка запуска таймера')
-        console.error('Error starting timer:', error)
-      } finally {
-        startingTimer.value = false
-      }
-    }
-
     const stopTimer = async () => {
       if (!activeTimeEntry.value) return
 
@@ -305,56 +149,6 @@ export default {
       } catch (error) {
         toast.error('Ошибка остановки таймера')
         console.error('Error stopping timer:', error)
-      }
-    }
-
-    const toLocalDateTime = (value) => {
-      if (!value) return ''
-      return new Date(value).toISOString().slice(0, 16)
-    }
-
-    const openEditEntry = (entry) => {
-      editEntryForm.value = {
-        id: entry.id,
-        task: entry.task.id,
-        start_time: toLocalDateTime(entry.start_time),
-        end_time: toLocalDateTime(entry.end_time),
-        description: entry.description || ''
-      }
-      showEditModal.value = true
-    }
-
-    const saveEditedEntry = async () => {
-      try {
-        await api.updateTimeEntry(editEntryForm.value.id, {
-          task: Number(editEntryForm.value.task),
-          start_time: toIsoString(editEntryForm.value.start_time),
-          end_time: toIsoString(editEntryForm.value.end_time),
-          description: editEntryForm.value.description || ''
-        })
-        toast.success('Запись обновлена')
-        showEditModal.value = false
-        await fetchTimeEntries()
-      } catch (error) {
-        toast.error('Ошибка обновления записи')
-      }
-    }
-
-    const requestDeleteEntry = (id) => {
-      deleteEntryId.value = id
-      showDeleteModal.value = true
-    }
-
-    const confirmDeleteEntry = async () => {
-      try {
-        await api.deleteTimeEntry(deleteEntryId.value)
-        showDeleteModal.value = false
-        deleteEntryId.value = null
-        toast.success('Запись времени удалена')
-        await fetchTimeEntries()
-      } catch (error) {
-        toast.error('Ошибка удаления записи времени')
-        console.error('Error deleting time entry:', error)
       }
     }
 
@@ -393,36 +187,6 @@ export default {
     const truncateText = (text, length) => {
       if (!text) return ''
       return text.length > length ? text.substring(0, length) + '...' : text
-    }
-
-    const toIsoString = (localDateTime) => {
-      return localDateTime ? new Date(localDateTime).toISOString() : null
-    }
-
-    const saveManualEntry = async () => {
-      const start = new Date(manualEntry.value.start_time)
-      const end = new Date(manualEntry.value.end_time)
-      if (end <= start) {
-        toast.error('Время окончания должно быть позже времени начала')
-        return
-      }
-
-      try {
-        savingManual.value = true
-        await api.createTimeEntry({
-          task: Number(manualEntry.value.task),
-          start_time: toIsoString(manualEntry.value.start_time),
-          end_time: toIsoString(manualEntry.value.end_time),
-          description: manualEntry.value.description || ''
-        })
-        toast.success('Запись времени добавлена')
-        manualEntry.value = { task: '', start_time: '', end_time: '', description: '' }
-        await fetchTimeEntries()
-      } catch (error) {
-        toast.error('Ошибка ручного ввода времени')
-      } finally {
-        savingManual.value = false
-      }
     }
 
     const updateTimerDisplay = () => {
@@ -495,29 +259,16 @@ export default {
       timeEntries,
       tasks,
       loading,
-      startingTimer,
-      savingManual,
-      newTimer,
-      manualEntry,
       activeTimeEntry,
       formattedTime,
       pomodoroDisplay,
       pomodoroRunning,
       pomodoroWorkMode,
-      showEditModal,
-      showDeleteModal,
-      editEntryForm,
-      startNewTimer,
       stopTimer,
-      openEditEntry,
-      requestDeleteEntry,
-      saveEditedEntry,
-      confirmDeleteEntry,
       formatDate,
       formatDateTime,
       formatDuration,
       truncateText,
-      saveManualEntry,
       startPomodoro,
       pausePomodoro,
       resetPomodoro
@@ -551,14 +302,9 @@ export default {
 
 .time-grid {
   display: grid;
-  grid-template-columns: 1.3fr 0.7fr;
+  grid-template-columns: 1fr;
   gap: 12px;
   align-items: start;
-}
-
-.time-grid > section:nth-child(3),
-.time-grid > section:nth-child(5) {
-  grid-column: 1 / -1;
 }
 
 .active-timer {
@@ -615,6 +361,12 @@ export default {
 
 .no-active i {
   font-size: 1.2rem;
+}
+
+.no-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .no-title {
@@ -699,50 +451,6 @@ export default {
   margin-top: 6px;
 }
 
-.entry-actions {
-  display: inline-flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.icon-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  border: 1px solid rgba(216, 198, 229, 0.9);
-  background: #ffffff;
-  color: #5f4b84;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.icon-btn.danger {
-  color: #a33745;
-  border-color: rgba(255, 189, 199, 0.95);
-  background: rgba(255, 235, 238, 0.85);
-}
-
-.modal-backdrop-custom {
-  position: fixed;
-  inset: 0;
-  background: rgba(22, 30, 49, 0.38);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1200;
-  padding: 16px;
-}
-
-.modal-card {
-  width: min(520px, 100%);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(219, 199, 230, 0.9);
-  box-shadow: 0 18px 36px rgba(136, 110, 149, 0.22);
-  padding: 16px;
-}
-
 @media (max-width: 992px) {
   .time-page {
     padding: 0 15px;
@@ -750,11 +458,6 @@ export default {
 
   .time-grid {
     grid-template-columns: 1fr;
-  }
-
-  .time-grid > section:nth-child(3),
-  .time-grid > section:nth-child(5) {
-    grid-column: auto;
   }
 }
 </style>

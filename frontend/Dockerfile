@@ -11,8 +11,7 @@ RUN npm install
 # Копируем весь проект
 COPY . .
 
-# Открываем порт Vite (обычно 5173)
-EXPOSE 5173
+EXPOSE 3000
 
-# Запускаем dev сервер через npm
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Порт как в vite.config.js; --host для доступа с хоста и по LAN
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]

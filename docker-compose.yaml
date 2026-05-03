@@ -12,7 +12,9 @@ services:
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
-      - VITE_API_BASE_URL=http://backend:8000/api
+      # В браузере на ПК нужен localhost, не имя сервиса Docker. С телефона — IP в .env (см. lan-access.env.example)
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8000/api}
+      - VITE_PROXY_TARGET=${VITE_PROXY_TARGET:-http://backend:8000}
     depends_on:
       - backend
     stdin_open: true
@@ -27,12 +29,17 @@ services:
     container_name: diplom-backend
     ports:
       - "8000:8000"
+    command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"]
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/.venv  # Игнорируем локальную .venv
     environment:
       - PYTHONUNBUFFERED=1
       - DEBUG=1
+      # Пример: DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend,192.168.0.106
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      # Опционально: DJANGO_CSRF_TRUSTED_ORIGINS=http://192.168.0.106:3000
+      - DJANGO_CSRF_TRUSTED_ORIGINS=${DJANGO_CSRF_TRUSTED_ORIGINS:-}
     networks:
       - diplom-network
 

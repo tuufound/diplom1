@@ -1,6 +1,32 @@
 import axios from 'axios'
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+/**
+ * На телефоне по http://192.168.x.x:3000 запросы к localhost:8000 уходят на сам телефон.
+ * Если в .env забыли IP ПК, подставляем тот же хост, что у открытой страницы (только dev / LAN).
+ */
+function resolveApiBaseUrl() {
+  const fromEnv = (import.meta.env.VITE_API_BASE_URL || '').trim()
+  const hostname =
+    typeof window !== 'undefined' ? window.location.hostname : ''
+  const isLan =
+    hostname &&
+    hostname !== 'localhost' &&
+    hostname !== '127.0.0.1'
+  if (isLan) {
+    // localhost / docker service «backend» в браузере телефона не указывают на ваш ПК
+    const unusableFromPhone =
+      !fromEnv ||
+      fromEnv.includes('localhost') ||
+      fromEnv.includes('127.0.0.1') ||
+      fromEnv.includes('://backend')
+    if (unusableFromPhone) {
+      return `http://${hostname}:8000/api`
+    }
+  }
+  return fromEnv || 'http://localhost:8000/api'
+}
+
+const apiBaseUrl = resolveApiBaseUrl()
 
 // Create axios instance
 const api = axios.create({
@@ -32,9 +58,15 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem('token')
-      window.location.href = '/login'
+      const reqUrl = String(error.config?.url || '')
+      const skipRedirect =
+        reqUrl.includes('/auth/login/') ||
+        reqUrl.includes('/auth/register/') ||
+        reqUrl.includes('/auth/refresh/')
+      if (!skipRedirect) {
+        localStorage.removeItem('token')
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }

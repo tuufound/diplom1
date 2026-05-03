@@ -29,7 +29,17 @@ export const useAuthStore = defineStore('auth', () => {
       toast.success('Вход выполнен успешно!')
       return response.data
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Ошибка входа')
+      const detail = error.response?.data?.detail
+      const network =
+        error.code === 'ERR_NETWORK' ||
+        error.message === 'Network Error' ||
+        !error.response
+      toast.error(
+        detail ||
+          (network
+            ? 'Нет связи с сервером. Откройте сайт по IP ПК (например http://192.168.0.106:3000) и проверьте, что Django запущен на 0.0.0.0:8000.'
+            : 'Ошибка входа')
+      )
       throw error
     }
   }

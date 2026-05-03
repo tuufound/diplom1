@@ -482,21 +482,33 @@ class ReportView(APIView):
             for idx in range(7)
         ]
 
-        completed_tasks = tasks.filter(status="done").exclude(completed_at__isnull=True)
-        avg_completion_seconds = None
-        if completed_tasks.exists():
-            total_completion_seconds = 0
-            valid_count = 0
-            for task in completed_tasks:
-                if task.completed_at and task.created_at and task.completed_at > task.created_at:
-                    total_completion_seconds += int(
-                        (task.completed_at - task.created_at).total_seconds()
-                    )
-                    valid_count += 1
-            if valid_count:
-                avg_completion_seconds = total_completion_seconds // valid_count
-
         total_tracked_seconds = sum(item["seconds"] for item in task_time_seconds.values())
+
+        # Среднее учтённое время по выполненным: только таймер за период по задачам со статусом «done».
+        # Раньше пересечение с выборкой tasks по дате создания давало 0 при учёте на старых закрытых задачах.
+        done_ids_global = set(
+            Task.objects.filter(task_visible_q(request.user), status="done").values_list(
+                "id", flat=True
+            )
+        )
+        tracked_on_done_tasks = sum(
+            data["seconds"]
+            for tid, data in task_time_seconds.items()
+            if tid in done_ids_global
+        )
+        done_with_tracked = sum(
+            1
+            for tid, data in task_time_seconds.items()
+            if tid in done_ids_global and data["seconds"] > 0
+        )
+        if done_with_tracked:
+            avg_completion_seconds = tracked_on_done_tasks // done_with_tracked
+        else:
+            completed_n = tasks.filter(status="done").count()
+            if completed_n and total_tracked_seconds:
+                avg_completion_seconds = total_tracked_seconds // completed_n
+            else:
+                avg_completion_seconds = None
 
         return Response(
             {

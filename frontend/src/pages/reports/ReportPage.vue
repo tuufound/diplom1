@@ -53,7 +53,7 @@
         <strong>{{ formatSeconds(report.total_tracked_seconds || 0) }}</strong>
       </article>
       <article class="metric-card">
-        <span>Среднее выполнение</span>
+        <span>Среднее время</span>
         <strong>{{ avgCompletionLabel }}</strong>
       </article>
     </section>
@@ -196,8 +196,9 @@ export default {
     })
 
     const avgCompletionLabel = computed(() => {
-      if (!report.value?.avg_completion_seconds) return 'Нет данных'
-      return formatSeconds(report.value.avg_completion_seconds)
+      const v = report.value?.avg_completion_seconds
+      if (v == null) return 'Нет данных'
+      return formatSeconds(v)
     })
 
     const getStatusText = (status) => {
@@ -233,7 +234,9 @@ export default {
       const h = Math.floor(safeSeconds / 3600)
       const m = Math.floor((safeSeconds % 3600) / 60)
       if (h > 0) return `${h}ч ${m}м`
-      return `${m}м`
+      if (m > 0) return `${m}м`
+      if (safeSeconds > 0) return `${safeSeconds} с`
+      return '0м'
     }
 
     const setDateRange = () => {

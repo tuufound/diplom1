@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.utils import timezone
 from rest_framework import serializers
 
 from .permissions import can_delete_task
@@ -235,6 +236,8 @@ class TaskSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         collaborator_ids = validated_data.pop("collaborator_ids", [])
+        if validated_data.get("status") == "done" and not validated_data.get("completed_at"):
+            validated_data["completed_at"] = timezone.now()
         task = super().create(validated_data)
         if collaborator_ids:
             TaskCollaborator.objects.bulk_create(
@@ -244,6 +247,12 @@ class TaskSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         collaborator_ids = validated_data.pop("collaborator_ids", None)
+        new_status = validated_data.get("status", instance.status)
+        if "completed_at" not in validated_data:
+            if new_status == "done" and instance.status != "done":
+                validated_data["completed_at"] = timezone.now()
+            elif new_status != "done" and instance.status == "done":
+                validated_data["completed_at"] = None
         task = super().update(instance, validated_data)
         if collaborator_ids is not None:
             TaskCollaborator.objects.filter(task=task).delete()

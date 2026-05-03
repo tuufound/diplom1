@@ -23,12 +23,17 @@
               <i class="fas fa-search"></i>
               <input v-model="query" class="form-control" type="text" placeholder="Поиск по названию и описанию">
             </div>
+            <div class="status-filters scope-filters">
+              <button type="button" class="filter-pill" :class="{ active: taskScope === 'all' }" @click="setTaskScope('all')">Все задачи</button>
+              <button type="button" class="filter-pill" :class="{ active: taskScope === 'collaborative' }" @click="setTaskScope('collaborative')">Совместные</button>
+              <button type="button" class="filter-pill" :class="{ active: taskScope === 'favorites' }" @click="setTaskScope('favorites')"><i class="fas fa-star me-1"></i>Избранное</button>
+            </div>
             <div class="status-filters">
-              <button class="filter-pill" :class="{ active: statusFilter === 'all' }" @click="statusFilter = 'all'">Все</button>
-              <button class="filter-pill" :class="{ active: statusFilter === 'todo' }" @click="statusFilter = 'todo'">К выполнению</button>
-              <button class="filter-pill" :class="{ active: statusFilter === 'in_progress' }" @click="statusFilter = 'in_progress'">В процессе</button>
-              <button class="filter-pill" :class="{ active: statusFilter === 'done' }" @click="statusFilter = 'done'">Выполнено</button>
-              <button class="filter-pill" :class="{ active: statusFilter === 'archived' }" @click="statusFilter = 'archived'">Архив</button>
+              <button type="button" class="filter-pill" :class="{ active: statusFilter === 'all' }" @click="statusFilter = 'all'">Все статусы</button>
+              <button type="button" class="filter-pill" :class="{ active: statusFilter === 'todo' }" @click="statusFilter = 'todo'">К выполнению</button>
+              <button type="button" class="filter-pill" :class="{ active: statusFilter === 'in_progress' }" @click="statusFilter = 'in_progress'">В процессе</button>
+              <button type="button" class="filter-pill" :class="{ active: statusFilter === 'done' }" @click="statusFilter = 'done'">Выполнено</button>
+              <button type="button" class="filter-pill" :class="{ active: statusFilter === 'archived' }" @click="statusFilter = 'archived'">Архив</button>
             </div>
           </div>
           <div class="kpis">
@@ -72,22 +77,39 @@
               <div class="chips">
                 <span class="chip" :class="getStatusChipClass(item.task.status)">{{ getStatusText(item.task.status) }}</span>
                 <span class="chip muted">{{ formatDate(item.task.created_at) }}</span>
+                <span v-if="!item.task.project" class="chip chip-personal">Личная</span>
+                <span v-if="item.task.project" class="chip chip-collaborative">Совместная</span>
                 <span v-if="item.task.project" class="chip" :class="getProjectChipClass(item.task.project?.id)">{{ item.task.project.name }}</span>
                 <span v-if="item.task.category" class="chip" :class="getCategoryChipClass(item.task.category?.id)">
                   <span class="me-1">{{ item.task.category.icon || '📁' }}</span>{{ item.task.category.name }}
                 </span>
                 <span v-if="item.task.priority" class="chip" :class="getPriorityChipClass(item.task.priority)">{{ item.task.priority.name }}</span>
                 <span v-if="item.isChild" class="chip child">Подзадача</span>
+                <span v-if="item.task.collaborators?.length" class="chip chip-coworkers">
+                  <i class="fas fa-users me-1"></i>{{ item.task.collaborators.map((u) => u.username).join(', ') }}
+                </span>
+                <span v-if="countdownLabelForTask(item.task.id)" class="chip chip-timer-countdown">
+                  <i class="fas fa-bell me-1"></i>До сигнала: {{ countdownLabelForTask(item.task.id) }}
+                </span>
               </div>
             </div>
             <div class="task-actions">
+              <button
+                class="icon-btn star-btn"
+                :class="{ active: item.task.is_favorited }"
+                type="button"
+                @click.stop="toggleFavorite(item.task)"
+                title="Избранное"
+              >
+                <i class="fas fa-star"></i>
+              </button>
               <button class="icon-btn" @click.stop="toggleTimeTracking(item.task)" :disabled="!item.task.can_edit" title="Таймер">
                 <i class="fas" :class="getTimeTrackingIcon(item.task)"></i>
               </button>
               <button class="icon-btn" @click.stop="editTask(item.task.id)" :disabled="!item.task.can_edit" title="Редактировать">
                 <i class="fas fa-pen"></i>
               </button>
-              <button class="icon-btn danger" @click.stop="deleteTask(item.task.id)" :disabled="!item.task.can_edit" title="Удалить">
+              <button class="icon-btn danger" @click.stop="deleteTask(item.task.id)" :disabled="!item.task.can_delete" title="Удалить">
                 <i class="fas fa-trash"></i>
               </button>
               <router-link class="icon-btn" :to="`/tasks/create?parent=${item.task.id}`" title="Подзадача">
@@ -96,6 +118,48 @@
             </div>
           </article>
         </transition-group>
+      </div>
+
+      <div v-if="timerModalOpen" class="timer-modal-backdrop" @click.self="timerModalOpen = false">
+        <div class="timer-modal card shadow" @click.stop>
+          <div class="card-body">
+            <h5 class="card-title mb-2">
+              <i class="fas fa-clock me-2 text-primary"></i>Таймер
+            </h5>
+            <p v-if="timerModalTask" class="text-muted small mb-3">
+              Задача: <strong>{{ timerModalTask.title }}</strong>
+            </p>
+            <div class="mb-3">
+              <label class="form-label">Лимит времени (минуты)</label>
+              <input
+                v-model.number="timerModalMinutes"
+                type="number"
+                class="form-control"
+                min="0"
+                max="720"
+                placeholder="0 — без сигнала"
+              >
+              <small class="form-text text-muted">0 — только учёт времени без обратного отсчёта и звука.</small>
+            </div>
+            <div class="form-check mb-2">
+              <input id="tm-sound" v-model="timerModalSound" class="form-check-input" type="checkbox">
+              <label class="form-check-label" for="tm-sound">Звуковой сигнал по окончании</label>
+            </div>
+            <div class="form-check mb-3">
+              <input id="tm-stop" v-model="timerModalAutoStop" class="form-check-input" type="checkbox">
+              <label class="form-check-label" for="tm-stop">Остановить учёт времени, когда время выйдет</label>
+            </div>
+            <div class="d-flex flex-wrap gap-2 justify-content-between">
+              <button type="button" class="btn btn-outline-secondary btn-sm" @click="playTimerPreview">
+                <i class="fas fa-volume-high me-1"></i>Проверить звук
+              </button>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary" @click="timerModalOpen = false">Отмена</button>
+                <button type="button" class="btn btn-primary" @click="confirmStartTimer">Старт</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -106,6 +170,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/utils/api'
 import { useToast } from 'vue-toastification'
+import { useTaskTimerCountdown } from '@/composables/useTaskTimerCountdown'
+import { playTimerExpirySound } from '@/utils/timerAlertSound'
 import { format, startOfMonth, endOfMonth, startOfWeek, addDays, isSameMonth, isSameDay } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
@@ -125,11 +191,21 @@ export default {
     const expandedParents = ref({})
     const query = ref('')
     const statusFilter = ref('all')
+    const taskScope = ref('all')
+
+    const timerModalOpen = ref(false)
+    const timerModalTask = ref(null)
+    const timerModalMinutes = ref(25)
+    const timerModalSound = ref(true)
+    const timerModalAutoStop = ref(false)
 
     const fetchTasks = async () => {
       try {
         loading.value = true
-        const response = await api.getTasks()
+        const params = {}
+        if (taskScope.value === 'collaborative') params.collaborative = 1
+        if (taskScope.value === 'favorites') params.favorites = 1
+        const response = await api.getTasks(params)
         tasks.value = response.data
       } catch (error) {
         toast.error('Ошибка загрузки задач')
@@ -224,6 +300,21 @@ export default {
       }
     }
 
+    const {
+      tick,
+      scheduleCountdown,
+      clearStoredCountdown,
+      remainingSecondsForEntry,
+      formatCountdown,
+      loadCountdown
+    } = useTaskTimerCountdown(timeEntries, {
+      stopEntry: async (entryId) => {
+        await api.stopTimeEntry(entryId)
+        toast.success('Таймер остановлен по лимиту')
+        await fetchTimeEntries()
+      }
+    })
+
     const goToTaskDetail = (taskId) => {
       router.push(`/tasks/${taskId}/edit`)
     }
@@ -240,8 +331,8 @@ export default {
     const deleteTask = async (taskId) => {
       if (confirm('Вы уверены, что хотите удалить эту задачу?')) {
         const task = tasks.value.find(item => item.id === taskId)
-        if (task && !task.can_edit) {
-          toast.error('Режим просмотра: удаление недоступно')
+        if (task && !task.can_delete) {
+          toast.error('Удаление недоступно')
           return
         }
         try {
@@ -255,24 +346,12 @@ export default {
       }
     }
 
-    const startTimeTracking = async (taskId) => {
-      const task = tasks.value.find(item => item.id === taskId)
-      if (task && !task.can_edit) {
-        toast.error('Режим просмотра: запуск таймера недоступен')
-        return
-      }
-      try {
-        await api.startTimeEntry(taskId, { description: 'Автоматический запуск' })
-        toast.success('Таймер запущен')
-        await fetchTimeEntries()
-      } catch (error) {
-        toast.error('Ошибка запуска таймера')
-        console.error('Error starting time tracking:', error)
-      }
-    }
-
     const stopTimeTracking = async (entryId) => {
       try {
+        const cfg = loadCountdown()
+        if (cfg && cfg.entryId === entryId) {
+          clearStoredCountdown()
+        }
         await api.stopTimeEntry(entryId)
         toast.success('Таймер остановлен')
         await fetchTimeEntries()
@@ -284,6 +363,43 @@ export default {
 
     const getActiveEntry = (taskId) => {
       return timeEntries.value.find(entry => entry.task?.id === taskId && !entry.end_time)
+    }
+
+    const countdownLabelForTask = (taskId) => {
+      void tick.value
+      const entry = getActiveEntry(taskId)
+      if (!entry) return ''
+      const sec = remainingSecondsForEntry(entry.id)
+      if (sec == null) return ''
+      return formatCountdown(sec)
+    }
+
+    const confirmStartTimer = async () => {
+      const task = timerModalTask.value
+      if (!task?.can_edit) return
+      const mins = Number(timerModalMinutes.value)
+      if (!Number.isFinite(mins) || mins < 0) {
+        toast.error('Укажите неотрицательное число минут')
+        return
+      }
+      try {
+        const { data } = await api.startTimeEntry(task.id, { description: 'Таймер' })
+        toast.success('Таймер запущен')
+        if (mins > 0) {
+          scheduleCountdown(data.id, mins, timerModalSound.value, timerModalAutoStop.value)
+        } else {
+          clearStoredCountdown()
+        }
+        timerModalOpen.value = false
+        await fetchTimeEntries()
+      } catch (error) {
+        toast.error('Ошибка запуска таймера')
+        console.error('Error starting time tracking:', error)
+      }
+    }
+
+    const playTimerPreview = () => {
+      playTimerExpirySound()
     }
 
     const getStatusText = (status) => {
@@ -379,8 +495,35 @@ export default {
       const activeEntry = getActiveEntry(task.id)
       if (activeEntry) {
         stopTimeTracking(activeEntry.id)
-      } else {
-        startTimeTracking(task.id)
+        return
+      }
+      if (!task.can_edit) {
+        toast.error('Режим просмотра: запуск таймера недоступен')
+        return
+      }
+      timerModalTask.value = task
+      timerModalMinutes.value = 25
+      timerModalSound.value = true
+      timerModalAutoStop.value = false
+      timerModalOpen.value = true
+    }
+
+    const setTaskScope = (scope) => {
+      taskScope.value = scope
+      fetchTasks()
+    }
+
+    const toggleFavorite = async (task) => {
+      try {
+        const { data } = await api.toggleTaskFavorite(task.id)
+        if (taskScope.value === 'favorites' && !data.is_favorited) {
+          await fetchTasks()
+          return
+        }
+        task.is_favorited = data.is_favorited
+      } catch (error) {
+        toast.error('Не удалось обновить избранное')
+        console.error('toggleFavorite', error)
       }
     }
 
@@ -411,10 +554,20 @@ export default {
       overdueTasksCount,
       query,
       statusFilter,
+      taskScope,
+      setTaskScope,
+      toggleFavorite,
       goToTaskDetail,
       editTask,
       deleteTask,
-      startTimeTracking,
+      timerModalOpen,
+      timerModalTask,
+      timerModalMinutes,
+      timerModalSound,
+      timerModalAutoStop,
+      confirmStartTimer,
+      playTimerPreview,
+      countdownLabelForTask,
       getStatusText,
       getStatusChipClass,
       getPriorityChipClass,
@@ -694,6 +847,62 @@ export default {
   background: rgba(220, 238, 255, 0.72);
   border-color: rgba(172, 206, 239, 0.82);
   color: #2f648f;
+}
+
+.chip-personal {
+  background: rgba(243, 240, 255, 0.95);
+  border-color: rgba(190, 180, 230, 0.75);
+  color: #5a4a8a;
+}
+
+.chip-collaborative {
+  background: linear-gradient(135deg, #e8f4ff, #f0f8ff);
+  border-color: rgba(120, 170, 220, 0.55);
+  color: #1d5a8a;
+}
+
+.chip-coworkers {
+  background: rgba(232, 245, 255, 0.92);
+  border-color: rgba(140, 190, 230, 0.65);
+  color: #2d5f87;
+  max-width: 100%;
+}
+
+.chip-timer-countdown {
+  background: rgba(255, 248, 230, 0.95);
+  border-color: rgba(220, 180, 90, 0.55);
+  color: #8a5f12;
+}
+
+.timer-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(40, 28, 52, 0.38);
+  backdrop-filter: blur(4px);
+}
+
+.timer-modal {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 18px;
+  border: 1px solid rgba(219, 199, 230, 0.85);
+}
+
+.scope-filters {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(224, 206, 232, 0.65);
+}
+
+.icon-btn.star-btn.active {
+  color: #c9a227;
+  border-color: rgba(212, 175, 55, 0.75);
+  background: rgba(255, 248, 220, 0.95);
 }
 
 .task-actions {

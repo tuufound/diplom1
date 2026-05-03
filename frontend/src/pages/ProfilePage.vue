@@ -15,14 +15,32 @@
         <div class="card mb-4">
           <div class="card-body text-center">
             <div class="profile-avatar mb-3">
-              <span class="avatar">
+              <span v-if="profilePhoto" class="avatar avatar-photo-wrap">
+                <img :src="profilePhoto" alt="Фото профиля" class="avatar-photo">
+              </span>
+              <span v-else class="avatar">
                 <i class="fas fa-user"></i>
               </span>
+            </div>
+            <div class="d-flex justify-content-center gap-2 mb-3">
+              <input
+                ref="avatarInput"
+                class="d-none"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                @change="onAvatarSelected"
+              >
+              <button class="btn btn-outline-secondary btn-sm" @click="triggerAvatarSelect">
+                <i class="fas fa-image me-1"></i> Сменить фото
+              </button>
+              <button v-if="profilePhoto" class="btn btn-outline-danger btn-sm" @click="removeAvatar">
+                <i class="fas fa-trash me-1"></i> Убрать
+              </button>
             </div>
             <h4 class="mb-1">{{ user?.username }}</h4>
             <p class="text-muted mb-3">{{ user?.email }}</p>
             <div class="d-flex justify-content-center gap-2">
-              <button class="btn btn-outline-primary btn-sm" disabled>
+              <button class="btn btn-outline-primary btn-sm" @click="startEditing">
                 <i class="fas fa-edit me-1"></i> Редактировать профиль
               </button>
               <router-link class="btn btn-primary btn-sm" to="/tasks">
@@ -88,30 +106,47 @@
 
         <div class="card">
           <div class="card-header">
-            <h5 class="mb-0">Настройки</h5>
+            <h5 class="mb-0">{{ isEditingProfile ? 'Редактирование профиля' : 'Настройки' }}</h5>
           </div>
           <div class="card-body">
-            <div class="mb-3">
-              <label for="theme" class="form-label">Темный режим</label>
-              <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="theme" v-model="darkMode">
-                <label class="form-check-label" for="theme">Включить темный режим</label>
+            <template v-if="isEditingProfile">
+              <div class="mb-3">
+                <label for="profileUsername" class="form-label">Имя пользователя</label>
+                <input id="profileUsername" class="form-control" v-model.trim="profileForm.username" maxlength="150">
               </div>
-            </div>
-            <div class="mb-3">
-              <label for="notifications" class="form-label">Уведомления</label>
-              <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="notifications" v-model="notificationsEnabled">
-                <label class="form-check-label" for="notifications">Включить уведомления</label>
+              <div class="d-flex gap-2">
+                <button class="btn btn-primary" :disabled="savingProfile" @click="saveProfile">
+                  <span v-if="savingProfile" class="spinner-border spinner-border-sm me-2"></span>
+                  Сохранить
+                </button>
+                <button class="btn btn-outline-secondary" :disabled="savingProfile" @click="cancelEditing">
+                  Отмена
+                </button>
               </div>
-            </div>
-            <div class="mb-3">
-              <label for="language" class="form-label">Язык</label>
-              <select class="form-select" id="language" v-model="language">
-                <option value="ru">Русский</option>
-                <option value="en">English</option>
-              </select>
-            </div>
+            </template>
+            <template v-else>
+              <div class="mb-3">
+                <label for="theme" class="form-label">Темный режим</label>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="theme" v-model="darkMode">
+                  <label class="form-check-label" for="theme">Включить темный режим</label>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="notifications" class="form-label">Уведомления</label>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="notifications" v-model="notificationsEnabled">
+                  <label class="form-check-label" for="notifications">Включить уведомления</label>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="language" class="form-label">Язык</label>
+                <select class="form-select" id="language" v-model="language">
+                  <option value="ru">Русский</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -146,6 +181,18 @@
   font-size: 1.6rem;
 }
 
+.avatar-photo-wrap {
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.avatar-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 @media (max-width: 768px) {
   .profile-head {
     flex-direction: column;
@@ -154,11 +201,12 @@
 </style>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { useRouter } from 'vue-router'
+import { useToast } from 'vue-toastification'
 import api from '@/utils/api'
 
 export default {
@@ -166,6 +214,7 @@ export default {
   setup() {
     const authStore = useAuthStore()
     const router = useRouter()
+    const toast = useToast()
 
     const user = computed(() => authStore.user)
 
@@ -181,6 +230,17 @@ export default {
     const darkMode = ref(false)
     const notificationsEnabled = ref(true)
     const language = ref('ru')
+    const isEditingProfile = ref(false)
+    const savingProfile = ref(false)
+    const avatarInput = ref(null)
+    const profilePhoto = ref('')
+    const profileForm = ref({
+      username: ''
+    })
+    const avatarStorageKey = computed(() => {
+      const key = user.value?.id || user.value?.username || 'guest'
+      return `profile_photo_${key}`
+    })
 
     const getActivityTypeText = (type) => {
       const typeMap = {
@@ -212,6 +272,74 @@ export default {
     const logout = () => {
       authStore.logout()
       router.push('/login')
+    }
+
+    const syncProfileForm = () => {
+      profileForm.value.username = user.value?.username || ''
+    }
+
+    const startEditing = () => {
+      syncProfileForm()
+      isEditingProfile.value = true
+    }
+
+    const cancelEditing = () => {
+      isEditingProfile.value = false
+      syncProfileForm()
+    }
+
+    const saveProfile = async () => {
+      const username = profileForm.value.username.trim()
+      if (!username) {
+        toast.error('Имя пользователя не может быть пустым')
+        return
+      }
+      try {
+        savingProfile.value = true
+        await api.updateCurrentUser({ username })
+        await authStore.checkAuth()
+        isEditingProfile.value = false
+        toast.success('Профиль обновлен')
+      } catch (error) {
+        toast.error(error.response?.data?.detail || 'Ошибка обновления профиля')
+      } finally {
+        savingProfile.value = false
+      }
+    }
+
+    const loadAvatar = () => {
+      profilePhoto.value = localStorage.getItem(avatarStorageKey.value) || ''
+    }
+
+    const triggerAvatarSelect = () => {
+      avatarInput.value?.click()
+    }
+
+    const onAvatarSelected = (event) => {
+      const file = event.target.files?.[0]
+      if (!file) return
+      if (!file.type.startsWith('image/')) {
+        toast.error('Выберите файл изображения')
+        return
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('Максимальный размер изображения: 2MB')
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = () => {
+        profilePhoto.value = String(reader.result || '')
+        localStorage.setItem(avatarStorageKey.value, profilePhoto.value)
+        toast.success('Фото профиля обновлено')
+      }
+      reader.readAsDataURL(file)
+      event.target.value = ''
+    }
+
+    const removeAvatar = () => {
+      profilePhoto.value = ''
+      localStorage.removeItem(avatarStorageKey.value)
+      toast.success('Фото профиля удалено')
     }
 
     const parseDurationToSeconds = (durationString) => {
@@ -270,6 +398,12 @@ export default {
 
     onMounted(() => {
       loadProfileData()
+      syncProfileForm()
+      loadAvatar()
+    })
+
+    watch(avatarStorageKey, () => {
+      loadAvatar()
     })
 
     return {
@@ -279,7 +413,18 @@ export default {
       darkMode,
       notificationsEnabled,
       language,
+      isEditingProfile,
+      savingProfile,
+      avatarInput,
+      profilePhoto,
+      profileForm,
       logout,
+      startEditing,
+      cancelEditing,
+      saveProfile,
+      triggerAvatarSelect,
+      onAvatarSelected,
+      removeAvatar,
       getActivityTypeText,
       getActivityBadgeClass,
       formatDate

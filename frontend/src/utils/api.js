@@ -54,10 +54,19 @@ export default {
   getCurrentUser() {
     return api.get('/auth/user/')
   },
+  searchUsers(params = {}) {
+    return api.get('/users/search/', { params })
+  },
+  updateCurrentUser(data) {
+    return api.patch('/auth/user/', data)
+  },
 
   // Task endpoints
-  getTasks() {
-    return api.get('/tasks/')
+  getTasks(params = {}) {
+    return api.get('/tasks/', { params })
+  },
+  toggleTaskFavorite(id) {
+    return api.post(`/tasks/${id}/favorite/`)
   },
   getTask(id) {
     return api.get(`/tasks/${id}/`)

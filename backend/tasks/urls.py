@@ -12,12 +12,14 @@ from .views import (
     ProjectRetrieveUpdateDestroyView,
     RegisterView,
     ReportView,
+    TaskFavoriteToggleView,
     TaskListCreateView,
     TaskRetrieveUpdateDestroyView,
     TimeEntryListCreateView,
     TimeEntryRetrieveUpdateDestroyView,
     TimeEntryStartView,
     TimeEntryStopView,
+    UserSearchView,
 )
 
 urlpatterns = [
@@ -25,6 +27,7 @@ urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="login"),
     path("auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("auth/user/", CurrentUserView.as_view(), name="current_user"),
+    path("users/search/", UserSearchView.as_view(), name="user_search"),
     path("auth/reset-password/", PasswordResetView.as_view(), name="reset_password"),
     path("categories/", CategoryListCreateView.as_view(), name="category_list_create"),
     path("priorities/", PriorityListCreateView.as_view(), name="priority_list_create"),
@@ -40,6 +43,11 @@ urlpatterns = [
         "tasks/<int:pk>/",
         TaskRetrieveUpdateDestroyView.as_view(),
         name="task_detail",
+    ),
+    path(
+        "tasks/<int:pk>/favorite/",
+        TaskFavoriteToggleView.as_view(),
+        name="task_favorite_toggle",
     ),
     path("time-entries/", TimeEntryListCreateView.as_view(), name="time_entry_list_create"),
     path(

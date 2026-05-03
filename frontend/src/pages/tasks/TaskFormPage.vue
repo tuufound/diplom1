@@ -9,6 +9,18 @@
         <p class="section-subtitle">Заполни только важное — остальное можно добавить позже.</p>
       </div>
       <div class="form-head-actions">
+        <button
+          v-if="isEditing"
+          type="button"
+          class="btn btn-outline-secondary favorite-head-btn"
+          :class="{ active: isFavorited }"
+          :disabled="favoriteLoading"
+          title="Избранное"
+          @click="toggleFavorite"
+        >
+          <i class="fas fa-star me-1"></i>
+          {{ isFavorited ? 'В избранном' : 'В избранное' }}
+        </button>
         <button type="button" class="btn btn-outline-secondary" @click="cancel">
           <i class="fas fa-arrow-left me-1"></i> К списку
         </button>
@@ -76,7 +88,7 @@
             <div class="col-md-6">
               <label for="project" class="form-label">Проект</label>
               <select class="form-select" id="project" v-model="form.project">
-                <option value="">Личная задача</option>
+                <option value="">Личная задача (без проекта)</option>
                 <option v-for="project in projects" :key="project.id" :value="project.id">
                   {{ project.name }}
                 </option>
@@ -112,6 +124,41 @@
             </div>
           </div>
 
+          <template v-if="canManageCollaborators">
+            <div class="divider"></div>
+            <div class="form-section-title">Совместная работа</div>
+            <div class="mb-3">
+              <label class="form-label" for="coworker-search">Соавторы</label>
+              <small class="form-help d-block mb-2">Приглашённые пользователи смогут редактировать задачу и вести учёт времени. Поиск по логину (от 2 символов).</small>
+              <input
+                id="coworker-search"
+                v-model="userSearchQuery"
+                type="text"
+                class="form-control"
+                autocomplete="off"
+                placeholder="Например: alex"
+                @input="onSearchInput"
+              >
+              <ul v-if="searchResults.length" class="coworker-hits list-unstyled mb-0 mt-2">
+                <li v-for="u in searchResults" :key="u.id">
+                  <button type="button" class="btn btn-sm btn-outline-primary hit-btn" @click="addCollaborator(u)">
+                    <i class="fas fa-user-plus me-1"></i>{{ u.username }}
+                  </button>
+                </li>
+              </ul>
+              <div v-if="selectedCollaborators.length" class="coworker-chips mt-2">
+                <span v-for="c in selectedCollaborators" :key="c.id" class="coworker-chip">
+                  {{ c.username }}
+                  <button type="button" class="chip-remove" title="Убрать" @click="removeCollaborator(c.id)">×</button>
+                </span>
+              </div>
+            </div>
+          </template>
+          <div v-else-if="isEditing && selectedCollaborators.length" class="mt-2">
+            <div class="form-section-title">Соавторы</div>
+            <p class="form-help mb-0">{{ selectedCollaborators.map((c) => c.username).join(', ') }}</p>
+          </div>
+
           <div class="divider"></div>
 
           <div class="form-section-title">Активность</div>
@@ -138,7 +185,7 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/utils/api'
 import { useToast } from 'vue-toastification'
@@ -166,7 +213,20 @@ export default {
     const categories = ref([])
     const projects = ref([])
     const loading = ref(false)
+    const favoriteLoading = ref(false)
+    const isFavorited = ref(false)
     const isEditing = computed(() => !!route.params.id)
+    const taskAccessRole = ref(null)
+    const selectedCollaborators = ref([])
+    const userSearchQuery = ref('')
+    const searchResults = ref([])
+    let searchDebounce = null
+
+    const canManageCollaborators = computed(() => {
+      if (!isEditing.value) return true
+      return taskAccessRole.value === 'owner'
+    })
+
     const allTasks = ref([])
     const availableParentTasks = computed(() => {
       const currentTaskId = isEditing.value ? Number(route.params.id) : null
@@ -189,6 +249,12 @@ export default {
             due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : '',
             is_active: task.is_active
           }
+          isFavorited.value = !!task.is_favorited
+          taskAccessRole.value = task.access_role
+          selectedCollaborators.value = (task.collaborators || []).map((c) => ({
+            id: c.id,
+            username: c.username
+          }))
         } catch (error) {
           toast.error('Ошибка загрузки задачи')
           console.error('Error fetching task:', error)
@@ -232,6 +298,38 @@ export default {
       }
     }
 
+    const runUserSearch = async () => {
+      const q = userSearchQuery.value.trim()
+      if (q.length < 2) {
+        searchResults.value = []
+        return
+      }
+      try {
+        const { data } = await api.searchUsers({ q })
+        const taken = new Set(selectedCollaborators.value.map((c) => c.id))
+        searchResults.value = data.filter((u) => !taken.has(u.id))
+      } catch (error) {
+        console.error('searchUsers', error)
+      }
+    }
+
+    const onSearchInput = () => {
+      if (searchDebounce) clearTimeout(searchDebounce)
+      searchDebounce = setTimeout(runUserSearch, 320)
+    }
+
+    const addCollaborator = (u) => {
+      if (selectedCollaborators.value.some((c) => c.id === u.id)) return
+      selectedCollaborators.value = [...selectedCollaborators.value, { id: u.id, username: u.username }]
+      searchResults.value = searchResults.value.filter((x) => x.id !== u.id)
+      userSearchQuery.value = ''
+      searchResults.value = []
+    }
+
+    const removeCollaborator = (id) => {
+      selectedCollaborators.value = selectedCollaborators.value.filter((c) => c.id !== id)
+    }
+
     const handleSubmit = async () => {
       try {
         loading.value = true
@@ -242,6 +340,9 @@ export default {
           category: form.value.category ? Number(form.value.category) : null,
           parent_task: form.value.parent_task ? Number(form.value.parent_task) : null,
           due_date: form.value.due_date ? new Date(form.value.due_date).toISOString() : null
+        }
+        if (canManageCollaborators.value) {
+          payload.collaborator_ids = selectedCollaborators.value.map((c) => c.id)
         }
         if (isEditing.value) {
           await api.updateTask(route.params.id, payload)
@@ -263,6 +364,20 @@ export default {
       router.push('/tasks')
     }
 
+    const toggleFavorite = async () => {
+      if (!isEditing.value) return
+      try {
+        favoriteLoading.value = true
+        const { data } = await api.toggleTaskFavorite(route.params.id)
+        isFavorited.value = data.is_favorited
+      } catch (error) {
+        toast.error('Не удалось обновить избранное')
+        console.error('toggleFavorite', error)
+      } finally {
+        favoriteLoading.value = false
+      }
+    }
+
     onMounted(() => {
       if (!isEditing.value && route.query.parent) {
         form.value.parent_task = Number(route.query.parent)
@@ -274,6 +389,10 @@ export default {
       fetchAllTasks()
     })
 
+    onUnmounted(() => {
+      if (searchDebounce) clearTimeout(searchDebounce)
+    })
+
     return {
       form,
       priorities,
@@ -281,9 +400,20 @@ export default {
       projects,
       availableParentTasks,
       loading,
+      favoriteLoading,
+      isFavorited,
       isEditing,
+      taskAccessRole,
+      canManageCollaborators,
+      selectedCollaborators,
+      userSearchQuery,
+      searchResults,
+      onSearchInput,
+      addCollaborator,
+      removeCollaborator,
       handleSubmit,
-      cancel
+      cancel,
+      toggleFavorite
     }
   }
 }
@@ -306,6 +436,13 @@ export default {
 .form-head-actions {
   display: inline-flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.favorite-head-btn.active {
+  color: #9a7b0a;
+  border-color: rgba(212, 175, 55, 0.75);
+  background: rgba(255, 248, 220, 0.95);
 }
 
 .form-grid {
@@ -365,6 +502,37 @@ export default {
   gap: 10px;
   justify-content: flex-end;
   padding: 12px 14px;
+}
+
+.coworker-hits .hit-btn {
+  margin-bottom: 6px;
+}
+
+.coworker-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.coworker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 10px;
+  border-radius: 999px;
+  background: rgba(232, 245, 255, 0.95);
+  border: 1px solid rgba(140, 190, 230, 0.55);
+  color: #2d5f87;
+  font-size: 0.88rem;
+}
+
+.coworker-chip .chip-remove {
+  border: none;
+  background: transparent;
+  color: #5a7a9a;
+  line-height: 1;
+  padding: 0 2px;
+  font-size: 1.1rem;
 }
 
 @media (max-width: 768px) {

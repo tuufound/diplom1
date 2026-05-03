@@ -2,6 +2,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
 from django.db.models.functions import TruncDate
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
@@ -9,7 +10,17 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Category, Priority, Project, ProjectMembership, Task, TimeEntry
+from .permissions import can_delete_task
+from .models import (
+    Category,
+    Priority,
+    Project,
+    ProjectMembership,
+    Task,
+    TaskCollaborator,
+    TaskFavorite,
+    TimeEntry,
+)
 from .serializers import (
     CategorySerializer,
     PrioritySerializer,
@@ -25,6 +36,8 @@ from .serializers import (
 def get_task_role(task, user):
     if task.user_id == user.id:
         return "owner"
+    if TaskCollaborator.objects.filter(task=task, user=user).exists():
+        return "collaborator"
     if not task.project_id:
         return None
     membership = ProjectMembership.objects.filter(project=task.project, user=user).first()
@@ -32,7 +45,16 @@ def get_task_role(task, user):
 
 
 def can_edit_task(task, user):
-    return get_task_role(task, user) in {"owner", "editor"}
+    role = get_task_role(task, user)
+    return role in {"owner", "collaborator", "editor"}
+
+
+def task_visible_q(user):
+    return (
+        Q(user=user)
+        | Q(project__memberships__user=user)
+        | Q(collaboratorships__user=user)
+    )
 
 
 class RegisterView(generics.CreateAPIView):
@@ -68,6 +90,23 @@ class CurrentUserView(APIView):
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+
+class UserSearchView(APIView):
+    """Поиск пользователей по имени для приглашения соавторов."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        q = (request.query_params.get("q") or "").strip()
+        if len(q) < 2:
+            return Response([])
+        users = (
+            User.objects.filter(username__icontains=q)
+            .exclude(id=request.user.id)
+            .order_by("username")[:20]
+        )
+        return Response(UserSerializer(users, many=True).data)
 
 
 class PasswordResetView(APIView):
@@ -166,11 +205,35 @@ class TaskListCreateView(generics.ListCreateAPIView):
     serializer_class = TaskSerializer
 
     def get_queryset(self):
-        return Task.objects.select_related(
-            "project", "category", "priority", "parent_task", "user"
-        ).filter(
-            Q(user=self.request.user) | Q(project__memberships__user=self.request.user)
-        ).distinct()
+        qs = (
+            Task.objects.select_related(
+                "project", "category", "priority", "parent_task", "user"
+            )
+            .prefetch_related("collaboratorships__user")
+            .filter(task_visible_q(self.request.user))
+            .distinct()
+        )
+
+        collaborative = self.request.query_params.get("collaborative")
+        if collaborative in ("1", "true", "yes"):
+            qs = qs.filter(project__isnull=False)
+
+        favorites = self.request.query_params.get("favorites")
+        if favorites in ("1", "true", "yes"):
+            qs = qs.filter(user_favorites__user=self.request.user).distinct()
+
+        return qs
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.request.method == "GET":
+            ids = list(self.get_queryset().values_list("pk", flat=True))
+            context["favorite_task_ids"] = set(
+                TaskFavorite.objects.filter(
+                    user=self.request.user, task_id__in=ids
+                ).values_list("task_id", flat=True)
+            )
+        return context
 
     def perform_create(self, serializer):
         project = serializer.validated_data.get("project")
@@ -192,11 +255,24 @@ class TaskRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TaskSerializer
 
     def get_queryset(self):
-        return Task.objects.select_related(
-            "project", "category", "priority", "parent_task", "user"
-        ).filter(
-            Q(user=self.request.user) | Q(project__memberships__user=self.request.user)
-        ).distinct()
+        return (
+            Task.objects.select_related(
+                "project", "category", "priority", "parent_task", "user"
+            )
+            .prefetch_related("collaboratorships__user")
+            .filter(task_visible_q(self.request.user))
+            .distinct()
+        )
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.request.method == "GET" and self.kwargs.get("pk"):
+            pk = int(self.kwargs["pk"])
+            if TaskFavorite.objects.filter(user=self.request.user, task_id=pk).exists():
+                context["favorite_task_ids"] = {pk}
+            else:
+                context["favorite_task_ids"] = set()
+        return context
 
     def perform_update(self, serializer):
         task = self.get_object()
@@ -205,9 +281,24 @@ class TaskRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         serializer.save()
 
     def perform_destroy(self, instance):
-        if not can_edit_task(instance, self.request.user):
+        if not can_delete_task(instance, self.request.user):
             raise PermissionDenied("Недостаточно прав для удаления задачи.")
         instance.delete()
+
+
+class TaskFavoriteToggleView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        task = get_object_or_404(
+            Task.objects.filter(task_visible_q(request.user)).distinct(),
+            pk=pk,
+        )
+        fav, created = TaskFavorite.objects.get_or_create(user=request.user, task=task)
+        if not created:
+            fav.delete()
+            return Response({"is_favorited": False})
+        return Response({"is_favorited": True})
 
 
 class TimeEntryListCreateView(generics.ListCreateAPIView):
@@ -218,12 +309,13 @@ class TimeEntryListCreateView(generics.ListCreateAPIView):
             Q(user=self.request.user)
             | Q(task__project__memberships__user=self.request.user)
             | Q(task__user=self.request.user)
+            | Q(task__collaboratorships__user=self.request.user)
         ).distinct()
 
     def perform_create(self, serializer):
         task = serializer.validated_data["task"]
         if not can_edit_task(task, self.request.user):
-            raise PermissionDenied("Только owner/editor может добавлять время.")
+            raise PermissionDenied("Недостаточно прав для учёта времени по этой задаче.")
         end_time = serializer.validated_data.get("end_time")
         serializer.save(user=self.request.user, is_active=end_time is None)
 
@@ -236,6 +328,7 @@ class TimeEntryRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             Q(user=self.request.user)
             | Q(task__project__memberships__user=self.request.user)
             | Q(task__user=self.request.user)
+            | Q(task__collaboratorships__user=self.request.user)
         ).distinct()
 
     def perform_update(self, serializer):
@@ -256,13 +349,10 @@ class TimeEntryRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 class TimeEntryStartView(APIView):
     def post(self, request, task_id):
-        try:
-            task = Task.objects.get(id=task_id)
-        except Task.DoesNotExist:
-            return Response(
-                {"detail": "Задача не найдена."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        task = get_object_or_404(
+            Task.objects.filter(task_visible_q(request.user)).distinct(),
+            id=task_id,
+        )
 
         if not can_edit_task(task, request.user):
             raise PermissionDenied("Только owner/editor может запускать таймер.")
@@ -315,13 +405,12 @@ class TimeEntryStopView(APIView):
 
 class ReportView(APIView):
     def get(self, request):
-        tasks = Task.objects.filter(
-            Q(user=request.user) | Q(project__memberships__user=request.user)
-        ).distinct()
+        tasks = Task.objects.filter(task_visible_q(request.user)).distinct()
         entries = TimeEntry.objects.filter(
             Q(user=request.user)
             | Q(task__project__memberships__user=request.user)
             | Q(task__user=request.user)
+            | Q(task__collaboratorships__user=request.user)
         ).distinct()
 
         start_date = request.query_params.get("start_date")

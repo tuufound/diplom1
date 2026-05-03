@@ -16,6 +16,16 @@
         </div>
       </div>
 
+      <div class="kanban-toolbar card mb-3">
+        <div class="card-body py-2 px-3">
+          <div class="scope-filters">
+            <button type="button" class="filter-pill" :class="{ active: taskScope === 'all' }" @click="setTaskScope('all')">Все</button>
+            <button type="button" class="filter-pill" :class="{ active: taskScope === 'collaborative' }" @click="setTaskScope('collaborative')">Совместные</button>
+            <button type="button" class="filter-pill" :class="{ active: taskScope === 'favorites' }" @click="setTaskScope('favorites')"><i class="fas fa-star me-1"></i>Избранное</button>
+          </div>
+        </div>
+      </div>
+
       <div v-if="loading" class="empty-state card">
         <div class="card-body">
           <i class="fas fa-spinner fa-spin"></i>
@@ -60,6 +70,8 @@
 
           <div class="chips">
             <span class="chip" :class="getStatusChipClass(task.status)">{{ getStatusText(task.status) }}</span>
+            <span v-if="!task.project" class="chip chip-personal">Личная</span>
+            <span v-if="task.project" class="chip chip-collaborative">Совместная</span>
             <span v-if="task.project" class="chip" :class="getProjectChipClass(task.project?.id)">{{ task.project.name }}</span>
             <span v-if="task.category" class="chip" :class="getCategoryChipClass(task.category?.id)">
               <span class="me-1">{{ task.category.icon || '📁' }}</span>{{ task.category.name }}
@@ -68,6 +80,15 @@
           </div>
 
           <div class="task-actions">
+            <button
+              type="button"
+              class="icon-btn star-btn"
+              :class="{ active: task.is_favorited }"
+              @click.stop="toggleFavorite(task)"
+              title="Избранное"
+            >
+              <i class="fas fa-star"></i>
+            </button>
             <button class="icon-btn" :disabled="!task.can_edit" @click="shiftStatus(task, -1)" title="Влево">
               <i class="fas fa-arrow-left"></i>
             </button>
@@ -105,10 +126,15 @@ export default {
       { status: 'archived', title: 'Архив' }
     ]
 
+    const taskScope = ref('all')
+
     const fetchTasks = async () => {
       try {
         loading.value = true
-        const response = await api.getTasks()
+        const params = {}
+        if (taskScope.value === 'collaborative') params.collaborative = 1
+        if (taskScope.value === 'favorites') params.favorites = 1
+        const response = await api.getTasks(params)
         tasks.value = response.data
       } catch (error) {
         toast.error('Ошибка загрузки задач')
@@ -242,11 +268,33 @@ export default {
       return map[status] || 'column-todo'
     }
 
+    const setTaskScope = (scope) => {
+      taskScope.value = scope
+      fetchTasks()
+    }
+
+    const toggleFavorite = async (task) => {
+      try {
+        const { data } = await api.toggleTaskFavorite(task.id)
+        if (taskScope.value === 'favorites' && !data.is_favorited) {
+          await fetchTasks()
+          return
+        }
+        task.is_favorited = data.is_favorited
+      } catch (error) {
+        toast.error('Не удалось обновить избранное')
+        console.error('toggleFavorite', error)
+      }
+    }
+
     onMounted(fetchTasks)
 
     return {
       loading,
       tasks,
+      taskScope,
+      setTaskScope,
+      toggleFavorite,
       columns,
       draggingTaskId,
       dropTargetStatus,
@@ -510,6 +558,49 @@ export default {
   border: 1px solid rgba(172, 206, 239, 0.84);
   color: #2f648f;
   font-weight: 500;
+}
+
+.kanban-toolbar .card-body {
+  padding: 10px 12px;
+}
+
+.scope-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-pill {
+  border: 1px solid rgba(216, 196, 226, 0.8);
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  color: #65567d;
+  padding: 7px 12px;
+  font-size: 0.82rem;
+}
+
+.filter-pill.active {
+  background: linear-gradient(135deg, rgba(246, 232, 245, 0.96), rgba(241, 226, 247, 0.96));
+  color: #3a4c78;
+  border-color: rgba(194, 170, 211, 0.9);
+}
+
+.chip-personal {
+  background: rgba(243, 240, 255, 0.95);
+  border-color: rgba(190, 180, 230, 0.75);
+  color: #5a4a8a;
+}
+
+.chip-collaborative {
+  background: linear-gradient(135deg, #e8f4ff, #f0f8ff);
+  border-color: rgba(120, 170, 220, 0.55);
+  color: #1d5a8a;
+}
+
+.icon-btn.star-btn.active {
+  color: #c9a227;
+  border-color: rgba(212, 175, 55, 0.75);
+  background: rgba(255, 248, 220, 0.95);
 }
 
 .empty-state {

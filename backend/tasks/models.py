@@ -126,6 +126,61 @@ class Task(models.Model):
     def __str__(self):
         return self.title
 
+
+class TaskFavorite(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="task_favorites",
+    )
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name="user_favorites",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "task"],
+                name="unique_task_favorite_per_user",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} ★ {self.task.title}"
+
+
+class TaskCollaborator(models.Model):
+    """Пользователь, приглашённый автором задачи для совместной работы."""
+
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name="collaboratorships",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="task_collaborations",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["task", "user"],
+                name="unique_task_collaborator",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} ↔ {self.task.title}"
+
+
 class TimeEntry(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='time_entries')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='time_entries')

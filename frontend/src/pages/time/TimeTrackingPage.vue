@@ -26,6 +26,43 @@
             <div class="timer-display">
               <span class="display-4">{{ formattedTime }}</span>
             </div>
+            <div v-if="activeCountdownLabel" class="countdown-banner mt-2">
+              <i class="fas fa-bell me-2"></i>
+              До сигнала: <strong>{{ activeCountdownLabel }}</strong>
+            </div>
+            <div class="limit-panel mt-3">
+              <div class="form-label small text-muted mb-1">Лимит и сигнал</div>
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <input
+                  v-model.number="limitMinutes"
+                  type="number"
+                  class="form-control form-control-sm limit-input"
+                  min="0"
+                  max="720"
+                  title="Минуты до сигнала"
+                >
+                <button type="button" class="btn btn-sm btn-primary" @click="applyActiveLimit">Задать</button>
+                <button
+                  v-if="hasActiveLimit"
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  @click="clearActiveLimit"
+                >
+                  Сбросить лимит
+                </button>
+              </div>
+              <div class="form-check form-check-inline mt-2 me-3">
+                <input id="lim-sound" v-model="limitSound" class="form-check-input" type="checkbox">
+                <label class="form-check-label small" for="lim-sound">Звук</label>
+              </div>
+              <div class="form-check form-check-inline mt-2">
+                <input id="lim-autostop" v-model="limitAutoStop" class="form-check-input" type="checkbox">
+                <label class="form-check-label small" for="lim-autostop">Стоп учёта в конце</label>
+              </div>
+              <button type="button" class="btn btn-link btn-sm p-0 mt-1" @click="playTimerPreview">
+                Проверить звук
+              </button>
+            </div>
           </div>
           <div v-else class="no-active">
             <i class="fas fa-clock"></i>
@@ -88,6 +125,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/utils/api'
 import { useToast } from 'vue-toastification'
+import { useTaskTimerCountdown } from '@/composables/useTaskTimerCountdown'
+import { playTimerExpirySound } from '@/utils/timerAlertSound'
 import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
@@ -129,6 +168,25 @@ export default {
       }
     }
 
+    const {
+      tick,
+      scheduleCountdown,
+      clearStoredCountdown,
+      remainingSecondsForEntry,
+      formatCountdown,
+      loadCountdown
+    } = useTaskTimerCountdown(timeEntries, {
+      stopEntry: async (entryId) => {
+        await api.stopTimeEntry(entryId)
+        toast.success('Таймер остановлен по лимиту')
+        await fetchTimeEntries()
+      }
+    })
+
+    const limitMinutes = ref(25)
+    const limitSound = ref(true)
+    const limitAutoStop = ref(false)
+
     const fetchTasks = async () => {
       try {
         const response = await api.getTasks()
@@ -143,6 +201,10 @@ export default {
       if (!activeTimeEntry.value) return
 
       try {
+        const cfg = loadCountdown()
+        if (cfg && cfg.entryId === activeTimeEntry.value.id) {
+          clearStoredCountdown()
+        }
         await api.stopTimeEntry(activeTimeEntry.value.id)
         toast.success('Таймер остановлен')
         await fetchTimeEntries()
@@ -150,6 +212,44 @@ export default {
         toast.error('Ошибка остановки таймера')
         console.error('Error stopping timer:', error)
       }
+    }
+
+    const activeCountdownLabel = computed(() => {
+      void tick.value
+      const entry = activeTimeEntry.value
+      if (!entry) return ''
+      const sec = remainingSecondsForEntry(entry.id)
+      if (sec == null) return ''
+      return formatCountdown(sec)
+    })
+
+    const hasActiveLimit = computed(() => {
+      void tick.value
+      const entry = activeTimeEntry.value
+      if (!entry) return false
+      const cfg = loadCountdown()
+      return !!(cfg && cfg.entryId === entry.id)
+    })
+
+    const applyActiveLimit = () => {
+      const entry = activeTimeEntry.value
+      if (!entry) return
+      const m = Number(limitMinutes.value)
+      if (!Number.isFinite(m) || m < 0) {
+        toast.error('Укажите неотрицательное число минут')
+        return
+      }
+      scheduleCountdown(entry.id, m, limitSound.value, limitAutoStop.value)
+      if (m > 0) toast.info('Лимит установлен')
+    }
+
+    const clearActiveLimit = () => {
+      clearStoredCountdown()
+      toast.info('Лимит снят')
+    }
+
+    const playTimerPreview = () => {
+      playTimerExpirySound()
     }
 
     const formatDate = (dateString) => {
@@ -209,6 +309,7 @@ export default {
 
     const pomodoroTick = () => {
       if (pomodoroSeconds.value <= 1) {
+        playTimerExpirySound()
         pomodoroWorkMode.value = !pomodoroWorkMode.value
         pomodoroSeconds.value = pomodoroWorkMode.value ? 25 * 60 : 5 * 60
         toast.info(pomodoroWorkMode.value ? 'Новая фокус-сессия' : 'Время перерыва')
@@ -261,6 +362,14 @@ export default {
       loading,
       activeTimeEntry,
       formattedTime,
+      activeCountdownLabel,
+      hasActiveLimit,
+      limitMinutes,
+      limitSound,
+      limitAutoStop,
+      applyActiveLimit,
+      clearActiveLimit,
+      playTimerPreview,
       pomodoroDisplay,
       pomodoroRunning,
       pomodoroWorkMode,
@@ -347,6 +456,27 @@ export default {
   background-color: rgba(255, 255, 255, 0.88);
   border-radius: 14px;
   border: 1px solid rgba(219, 199, 230, 0.75);
+}
+
+.countdown-banner {
+  text-align: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 248, 230, 0.92);
+  border: 1px solid rgba(220, 180, 90, 0.45);
+  color: #6a4810;
+  font-size: 0.95rem;
+}
+
+.limit-panel {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px dashed rgba(200, 180, 220, 0.75);
+}
+
+.limit-input {
+  width: 88px;
 }
 
 .no-active {

@@ -1,53 +1,36 @@
 <template>
   <nav class="navbar navbar-expand-lg app-navbar">
-    <div class="container-fluid px-2 px-lg-4">
+    <div class="container-fluid px-3 px-lg-4">
       <router-link class="navbar-brand" to="/tasks">
-        <span class="brand-icon"><i class="fas fa-tasks"></i></span>
-        Task Planner
+        <span class="brand-icon">
+          <i class="fas fa-gem"></i>
+        </span>
+        <span class="brand-text">TaskFlow</span>
       </router-link>
+
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
         <i class="fas fa-bars"></i>
       </button>
+
       <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav me-auto">
-          <li class="nav-item">
-            <router-link class="nav-link" to="/tasks">
-              <i class="fas fa-list-check me-1"></i> Задачи
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link class="nav-link" to="/kanban">
-              <i class="fas fa-table-columns me-1"></i> Канбан
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link class="nav-link" to="/projects">
-              <i class="fas fa-folder-open me-1"></i> Проекты
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link class="nav-link" to="/time-tracking">
-              <i class="fas fa-clock me-1"></i> Таймер
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link class="nav-link" to="/reports">
-              <i class="fas fa-chart-bar me-1"></i> Отчеты
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link class="nav-link" to="/profile">
-              <i class="fas fa-user me-1"></i> Профиль
+        <ul class="navbar-nav mx-auto">
+          <li class="nav-item" v-for="item in navItems" :key="item.path">
+            <router-link class="nav-link" :to="item.path">
+              <i :class="item.icon"></i>
+              <span>{{ item.label }}</span>
             </router-link>
           </li>
         </ul>
-        <div class="d-flex align-items-center gap-2">
-          <div class="user-chip">
-            <i class="fas fa-user me-1"></i>
-            {{ user?.username || 'Пользователь' }}
+
+        <div class="nav-actions">
+          <div class="user-info">
+            <div class="user-avatar">
+              <i class="fas fa-user"></i>
+            </div>
+            <span class="user-name">{{ user?.username || 'User' }}</span>
           </div>
-          <button class="btn btn-outline-light" @click="logout">
-            <i class="fas fa-sign-out-alt me-1"></i> Выход
+          <button class="btn-logout" @click="logout">
+            <i class="fas fa-sign-out-alt"></i>
           </button>
         </div>
       </div>
@@ -68,6 +51,15 @@ export default {
 
     const user = computed(() => authStore.user)
 
+    const navItems = [
+      { path: '/tasks', icon: 'fas fa-list-check', label: 'Задачи' },
+      { path: '/kanban', icon: 'fas fa-columns', label: 'Канбан' },
+      { path: '/projects', icon: 'fas fa-folder', label: 'Проекты' },
+      { path: '/time-tracking', icon: 'fas fa-clock', label: 'Таймер' },
+      { path: '/reports', icon: 'fas fa-chart-pie', label: 'Отчеты' },
+      { path: '/profile', icon: 'fas fa-user-circle', label: 'Профиль' }
+    ]
+
     const logout = () => {
       authStore.logout()
       router.push('/login')
@@ -75,6 +67,7 @@ export default {
 
     return {
       user,
+      navItems,
       logout
     }
   }
@@ -84,106 +77,201 @@ export default {
 <style scoped>
 .app-navbar {
   position: sticky;
-  top: 10px;
-  z-index: 100;
-  margin: 8px auto 14px;
-  max-width: 1420px;
-  border: 1px solid rgba(224, 206, 232, 0.8);
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(252, 241, 248, 0.88) 100%);
-  box-shadow: 0 12px 24px rgba(131, 102, 146, 0.18);
-  backdrop-filter: blur(10px);
+  top: 0;
+  z-index: 1000;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  padding: 0.75rem 0;
 }
 
 .navbar-brand {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  color: #293a65;
-  font-weight: 700;
+  gap: 0.75rem;
+  text-decoration: none;
 }
 
 .brand-icon {
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  color: #fff;
-  background: linear-gradient(135deg, #f35db5 0%, #8b7aff 100%);
+  border-radius: 14px;
+  background: var(--accent-gradient);
+  color: white;
+  font-size: 1.25rem;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.35);
+}
+
+.brand-text {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.nav-item {
+  margin: 0 0.25rem;
 }
 
 .nav-link {
-  transition: all 0.2s ease;
-  border-radius: 10px;
-  color: #5a4d7e !important;
-  padding: 8px 12px !important;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem !important;
+  border-radius: 12px;
+  color: var(--text-secondary) !important;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
 }
 
+.nav-link i {
+  font-size: 1rem;
+  transition: transform 0.3s ease;
+}
+
 .nav-link:hover {
-  color: #2f3f6d !important;
-  background: rgba(244, 232, 249, 0.9);
-  border-color: rgba(219, 199, 230, 0.72);
-  transform: translateY(-1px);
+  color: var(--accent-primary) !important;
+  background: var(--surface-1);
+  border-color: var(--glass-border);
+}
+
+.nav-link:hover i {
+  transform: scale(1.1);
 }
 
 .nav-link.router-link-active {
-  color: #2f3f6d !important;
+  color: white !important;
+  background: var(--accent-gradient);
+  border-color: transparent;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.nav-link.router-link-active i {
+  color: white;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: var(--surface-1);
+  border: 1px solid var(--glass-border);
+  border-radius: 50px;
+  backdrop-filter: blur(10px);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.875rem;
+}
+
+.user-name {
+  color: var(--text-primary);
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(219, 199, 230, 0.74);
-}
-
-.btn-outline-light {
-  border-color: rgba(219, 199, 230, 0.74);
-  color: #5d4e81;
-  background: rgba(255, 255, 255, 0.86);
-}
-
-.user-chip {
-  padding: 7px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(220, 202, 231, 0.78);
-  color: #5d4f80;
   font-size: 0.9rem;
-  background: rgba(255, 255, 255, 0.78);
 }
 
-.btn-outline-light:hover {
-  background: rgba(248, 238, 252, 0.95);
-  border-color: rgba(207, 181, 221, 0.86);
-  color: #4f4370;
+.btn-logout {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+  background: rgba(252, 129, 129, 0.15);
+  border-color: var(--danger-color);
+  color: var(--danger-color);
+  transform: translateY(-2px);
 }
 
 .navbar-toggler {
-  border-color: rgba(220, 202, 231, 0.78);
-  color: #5d4f80;
-  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 0.5rem 0.75rem;
+  background: var(--glass-bg);
+  color: var(--text-primary);
 }
 
 .navbar-toggler:focus {
-  box-shadow: 0 0 0 0.2rem rgba(179, 128, 205, 0.22);
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
 }
 
 @media (max-width: 992px) {
   .app-navbar {
-    top: 0;
-    margin: 0 0 10px;
-    border-radius: 0 0 16px 16px;
+    padding: 0.5rem 0;
   }
 
   .navbar-collapse {
-    padding-top: 10px;
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
   }
 
-  .navbar-nav .nav-link {
-    margin-bottom: 6px;
+  .nav-item {
+    margin: 0.25rem 0;
   }
 
-  .user-chip {
+  .nav-link {
+    padding: 0.75rem 1rem !important;
+  }
+
+  .nav-actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--glass-border);
+    justify-content: center;
+  }
+
+  .user-name {
     display: none;
+  }
+}
+
+@media (max-width: 576px) {
+  .brand-text {
+    display: none;
+  }
+
+  .brand-icon {
+    width: 38px;
+    height: 38px;
   }
 }
 </style>

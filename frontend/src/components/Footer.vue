@@ -1,13 +1,32 @@
 <template>
   <footer class="app-footer">
-    <div class="app-footer-inner">
-      <div class="copy">
-        &copy; {{ currentYear }} Task Planner
+    <div class="footer-content glass">
+      <div class="footer-left">
+        <span class="footer-brand">
+          <i class="fas fa-gem"></i>
+          TaskFlow
+        </span>
+        <span class="footer-copyright">
+          {{ currentYear }} — Планируй задачи стильно
+        </span>
       </div>
-      <div class="links">
-        <a href="#" aria-label="GitHub"><i class="fab fa-github"></i></a>
-        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
-        <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
+
+      <div class="footer-links">
+        <a href="#" class="social-link" title="GitHub">
+          <i class="fab fa-github"></i>
+        </a>
+        <a href="#" class="social-link" title="Telegram">
+          <i class="fab fa-telegram"></i>
+        </a>
+        <a href="#" class="social-link" title="Email">
+          <i class="fas fa-envelope"></i>
+        </a>
+      </div>
+
+      <div class="footer-right">
+        <div class="theme-toggle" @click="toggleTheme" :title="isDark ? 'Светлая тема' : 'Тёмная тема'">
+          <i class="fas" :class="isDark ? 'fa-sun' : 'fa-moon'"></i>
+        </div>
       </div>
     </div>
   </footer>
@@ -15,14 +34,23 @@
 
 <script>
 import { computed } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 
 export default {
   name: 'Footer',
   setup() {
+    const themeStore = useThemeStore()
     const currentYear = computed(() => new Date().getFullYear())
+    const isDark = computed(() => themeStore.isDark)
+
+    const toggleTheme = () => {
+      themeStore.toggleTheme()
+    }
 
     return {
-      currentYear
+      currentYear,
+      isDark,
+      toggleTheme
     }
   }
 }
@@ -31,50 +59,133 @@ export default {
 <style scoped>
 .app-footer {
   margin-top: auto;
-  padding: 14px 18px;
+  padding: 1.5rem 2rem;
 }
 
-.app-footer-inner {
-  max-width: 1440px;
+.footer-content {
+  max-width: 1400px;
   margin: 0 auto;
-  border: 1px solid rgba(224, 206, 232, 0.7);
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(8px);
-  border-radius: 16px;
-  box-shadow: 0 10px 22px rgba(136, 110, 149, 0.12);
-  padding: 12px 14px;
+  padding: 1rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 1.5rem;
+  border-radius: 20px;
 }
 
-.copy {
-  color: #6d5a86;
-  font-size: 0.9rem;
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
 }
 
-.links {
-  display: inline-flex;
-  gap: 10px;
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-primary);
 }
 
-.links a {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  border: 1px solid rgba(219, 199, 230, 0.8);
-  background: rgba(255, 255, 255, 0.9);
-  display: inline-flex;
+.footer-brand i {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.footer-copyright {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.footer-links {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.social-link {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: var(--surface-1);
+  display: flex;
   align-items: center;
   justify-content: center;
-  color: #5d4f80;
-  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.links a:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 18px rgba(136, 110, 149, 0.18);
-  background: rgba(248, 238, 252, 0.95);
+.social-link:hover {
+  background: var(--accent-gradient);
+  border-color: transparent;
+  color: white;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+}
+
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: var(--surface-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--surface-2);
+  color: var(--accent-primary);
+  transform: rotate(15deg);
+}
+
+.theme-toggle i {
+  font-size: 1rem;
+}
+
+@media (max-width: 992px) {
+  .app-footer {
+    padding: 1rem;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+    padding: 1.25rem;
+    gap: 1rem;
+  }
+
+  .footer-left {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .footer-brand {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .footer-copyright {
+    font-size: 0.8rem;
+  }
+
+  .social-link {
+    width: 36px;
+    height: 36px;
+  }
 }
 </style>

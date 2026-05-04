@@ -198,6 +198,7 @@ export default {
     parentShortLabel: 'Родитель',
     noParentTask: 'Без родительской задачи',
     parentHelp: 'Если это подзадача — выбери родителя.',
+    projectLockedByParent: 'Проект совпадает с родительской задачей и задаётся автоматически.',
     coworkersLabel: 'Соавторы'
   },
   projects: {
@@ -303,6 +304,7 @@ export default {
     end: 'Конец',
     apply: 'Применить',
     loadError: 'Ошибка загрузки данных отчетов',
+    pdfError: 'Не удалось сформировать PDF. Попробуйте экспорт в CSV или обновите страницу.',
     totalTasks: 'Всего задач',
     closed: 'Закрыто',
     timeSpent: 'Потрачено времени',

@@ -91,6 +91,12 @@ class CurrentUserView(APIView):
     def get(self, request):
         return Response(UserSerializer(request.user).data)
 
+    def patch(self, request):
+        serializer = UserSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(UserSerializer(user).data)
+
 
 class UserSearchView(APIView):
     """Поиск пользователей по имени для приглашения соавторов."""

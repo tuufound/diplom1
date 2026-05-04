@@ -1,7 +1,17 @@
 <template>
   <div class="app-container">
     <Navbar v-if="isAuthenticated" />
-    <main class="main-content">
+    <div v-if="isAuthenticated" class="authenticated-shell">
+      <AppShellDecor />
+      <main class="main-content">
+        <router-view v-slot="{ Component, route }">
+          <Transition name="slide-up" mode="out-in">
+            <component :is="Component" :key="route.fullPath" />
+          </Transition>
+        </router-view>
+      </main>
+    </div>
+    <main v-else class="main-content main-content--guest">
       <router-view v-slot="{ Component, route }">
         <Transition name="slide-up" mode="out-in">
           <component :is="Component" :key="route.fullPath" />
@@ -19,12 +29,14 @@ import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import Navbar from '@/components/Navbar.vue'
 import Footer from '@/components/Footer.vue'
+import AppShellDecor from '@/components/AppShellDecor.vue'
 
 export default {
   name: 'App',
   components: {
     Navbar,
-    Footer
+    Footer,
+    AppShellDecor
   },
   setup() {
     const authStore = useAuthStore()
@@ -54,11 +66,23 @@ export default {
   flex-direction: column;
 }
 
+.authenticated-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 0;
+}
+
 .main-content {
   flex: 1;
   padding: 2rem;
   position: relative;
   z-index: 1;
+}
+
+.main-content--guest {
+  flex: 1;
 }
 
 @media (max-width: 768px) {

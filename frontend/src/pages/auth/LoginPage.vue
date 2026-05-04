@@ -1,9 +1,9 @@
 <template>
-  <div class="auth-shell page-shell">
+  <AuthPageDecor>
     <div class="auth-card card">
       <div class="auth-header">
         <div class="brand">
-          <span class="brand-icon"><i class="fas fa-check"></i></span>
+          <AuthBrandIcon />
           <div>
             <h2 class="h4 mb-0">{{ $t('auth.loginTitle') }}</h2>
             <p class="section-subtitle mb-0">{{ $t('auth.loginSubtitle') }}</p>
@@ -66,16 +66,19 @@
         </div>
       </form>
     </div>
-  </div>
+  </AuthPageDecor>
 </template>
 
 <script>
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+import AuthPageDecor from '@/components/auth/AuthPageDecor.vue'
+import AuthBrandIcon from '@/components/auth/AuthBrandIcon.vue'
 
 export default {
   name: 'LoginPage',
+  components: { AuthPageDecor, AuthBrandIcon },
   setup() {
     const authStore = useAuthStore()
     const router = useRouter()
@@ -113,14 +116,6 @@ export default {
 </script>
 
 <style scoped>
-.auth-shell {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: calc(100vh - 170px);
-  padding: 18px;
-}
-
 .auth-card {
   width: min(520px, 100%);
 }
@@ -138,18 +133,6 @@ export default {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.brand-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
-  box-shadow: 0 12px 22px rgba(136, 110, 149, 0.22);
 }
 
 .auth-form {
@@ -172,10 +155,4 @@ export default {
   border-right: 0;
 }
 
-@media (max-width: 576px) {
-  .auth-shell {
-    min-height: auto;
-    padding: 12px;
-  }
-}
 </style>

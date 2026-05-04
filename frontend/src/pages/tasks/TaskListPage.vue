@@ -7,9 +7,6 @@
           <p class="section-subtitle">{{ $t('tasksList.subtitle') }}</p>
         </div>
         <div class="tasks-actions">
-          <router-link to="/kanban" class="btn btn-outline-secondary">
-            <i class="fas fa-table-columns me-1"></i> {{ $t('tasksList.kanban') }}
-          </router-link>
           <router-link to="/tasks/create" class="btn btn-primary">
             <i class="fas fa-plus me-1"></i> {{ $t('tasksList.newTask') }}
           </router-link>
@@ -56,14 +53,16 @@
         </div>
       </div>
 
-      <transition-group v-else name="task-list" tag="div" class="task-rows">
-          <article
-            v-for="item in visibleTasksFiltered"
-            :key="item.task.id"
-            class="task-row"
-            :class="[getRowClass(item.task), { 'is-child': item.isChild }]"
-            @click="goToTaskDetail(item.task.id)"
-          >
+      <div v-else class="task-rows">
+        <template v-for="block in groupedFilteredRows" :key="blockKey(block)">
+          <div v-if="block.kind === 'block'" class="task-block">
+            <article
+              v-for="item in [block.parentItem]"
+              :key="'p-' + item.task.id"
+              class="task-row"
+              :class="[getRowClass(item.task), { 'is-child': item.isChild }]"
+              @click="goToTaskDetail(item.task.id)"
+            >
             <div class="task-main">
               <div class="title-row">
                 <button
@@ -121,8 +120,107 @@
                 <i class="fas fa-folder"></i>
               </router-link>
             </div>
-          </article>
-      </transition-group>
+            </article>
+            <div
+              v-if="hasSubtasks(block.parentItem.task.id)"
+              class="subtask-panel"
+              :class="{ 'subtask-panel--open': isExpanded(block.parentItem.task.id) }"
+              :aria-hidden="!isExpanded(block.parentItem.task.id)"
+            >
+              <div class="subtask-panel-inner">
+                <TaskListSubtaskNode
+                  v-for="st in filteredSubtasksFor(block.parentItem.task.id)"
+                  :key="st.id"
+                  :task="st"
+                  :depth="1"
+                />
+              </div>
+            </div>
+          </div>
+          <div v-else class="task-block task-block--orphan">
+            <article
+              v-for="item in [block.row]"
+              :key="'o-' + item.task.id"
+              class="task-row"
+              :class="[getRowClass(item.task), { 'is-child': item.isChild }]"
+              @click="goToTaskDetail(item.task.id)"
+            >
+            <div class="task-main">
+              <div class="title-row">
+                <button
+                  v-if="hasSubtasks(item.task.id)"
+                  class="collapse-btn"
+                  type="button"
+                  :aria-expanded="isExpanded(item.task.id)"
+                  @click.stop="toggleSubtasks(item.task.id)"
+                >
+                  <i class="fas fa-chevron-right collapse-chevron" :class="{ 'is-open': isExpanded(item.task.id) }"></i>
+                </button>
+                <span v-else class="collapse-placeholder"></span>
+                <h6 class="task-title">{{ item.task.title }}</h6>
+              </div>
+              <p v-if="item.task.description" class="task-sub">{{ truncateText(item.task.description, 110) }}</p>
+              <div class="chips">
+                <span class="chip" :class="getStatusChipClass(item.task.status)">{{ getStatusText(item.task.status) }}</span>
+                <span class="chip muted">{{ formatDate(item.task.created_at) }}</span>
+                <span v-if="!item.task.project" class="chip chip-personal">{{ $t('tasksList.personal') }}</span>
+                <span v-if="item.task.project" class="chip chip-collaborative">{{ $t('tasksList.collaborativeChip') }}</span>
+                <span v-if="item.task.project" class="chip" :class="getProjectChipClass(item.task.project?.id)">{{ item.task.project.name }}</span>
+                <span v-if="item.task.category" class="chip" :class="getCategoryChipClass(item.task.category?.id)">
+                  <span class="me-1">{{ item.task.category.icon || '📁' }}</span>{{ item.task.category.name }}
+                </span>
+                <span v-if="item.task.priority" class="chip" :class="getPriorityChipClass(item.task.priority)">{{ item.task.priority.name }}</span>
+                <span v-if="item.isChild" class="chip child">{{ $t('tasksList.subtaskChip') }}</span>
+                <span v-if="item.task.collaborators?.length" class="chip chip-coworkers">
+                  <i class="fas fa-users me-1"></i>{{ item.task.collaborators.map((u) => u.username).join(', ') }}
+                </span>
+                <span v-if="countdownLabelForTask(item.task.id)" class="chip chip-timer-countdown">
+                  <i class="fas fa-bell me-1"></i>{{ $t('tasksList.countdownBell') }} {{ countdownLabelForTask(item.task.id) }}
+                </span>
+              </div>
+            </div>
+            <div class="task-actions">
+              <button
+                class="icon-btn star-btn"
+                :class="{ active: item.task.is_favorited }"
+                type="button"
+                @click.stop="toggleFavorite(item.task)"
+                :title="$t('tasksList.favorite')"
+              >
+                <i class="fas fa-star"></i>
+              </button>
+              <button class="icon-btn" @click.stop="toggleTimeTracking(item.task)" :disabled="!item.task.can_edit" :title="$t('tasksList.timer')">
+                <i class="fas" :class="getTimeTrackingIcon(item.task)"></i>
+              </button>
+              <button class="icon-btn" @click.stop="editTask(item.task.id)" :disabled="!item.task.can_edit" :title="$t('common.edit')">
+                <i class="fas fa-pen"></i>
+              </button>
+              <button class="icon-btn danger" @click.stop="deleteTask(item.task.id)" :disabled="!item.task.can_delete" :title="$t('common.delete')">
+                <i class="fas fa-trash"></i>
+              </button>
+              <router-link class="icon-btn" :to="`/tasks/create?parent=${item.task.id}`" :title="$t('tasksList.subtask')">
+                <i class="fas fa-folder"></i>
+              </router-link>
+            </div>
+            </article>
+            <div
+              v-if="hasSubtasks(block.row.task.id)"
+              class="subtask-panel"
+              :class="{ 'subtask-panel--open': isExpanded(block.row.task.id) }"
+              :aria-hidden="!isExpanded(block.row.task.id)"
+            >
+              <div class="subtask-panel-inner">
+                <TaskListSubtaskNode
+                  v-for="st in filteredSubtasksFor(block.row.task.id)"
+                  :key="st.id"
+                  :task="st"
+                  :depth="1"
+                />
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
 
       <div v-if="timerModalOpen" class="timer-modal-backdrop" @click.self="timerModalOpen = false">
         <div class="timer-modal card shadow" @click.stop>
@@ -170,7 +268,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, provide } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import api from '@/utils/api'
@@ -179,9 +277,11 @@ import { useTaskTimerCountdown } from '@/composables/useTaskTimerCountdown'
 import { playTimerExpirySound } from '@/utils/timerAlertSound'
 import { useAppDateLocale } from '@/composables/useAppDateLocale'
 import { format, startOfMonth, endOfMonth, startOfWeek, addDays, isSameMonth, isSameDay } from 'date-fns'
+import TaskListSubtaskNode from './TaskListSubtaskNode.vue'
 
 export default {
   name: 'TaskListPage',
+  components: { TaskListSubtaskNode },
   setup() {
     const { t } = useI18n()
     const dateLocale = useAppDateLocale()
@@ -263,18 +363,23 @@ export default {
     const visibleTasks = computed(() => {
       const result = []
       const knownIds = new Set(tasks.value.map(task => task.id))
-      const parents = [
+      const roots = [
         ...(tasksByParent.value[null] || []),
         ...tasks.value.filter(task => task.parent_task?.id && !knownIds.has(task.parent_task.id))
       ]
-      for (const parent of parents) {
-        result.push({ task: parent, isChild: false })
-        if (expandedParents.value[parent.id]) {
-          const subtasks = tasksByParent.value[parent.id] || []
-          for (const subtask of subtasks) {
-            result.push({ task: subtask, isChild: true })
+
+      const visit = (task, isChild) => {
+        result.push({ task, isChild })
+        if (expandedParents.value[task.id]) {
+          const subs = tasksByParent.value[task.id] || []
+          for (const sub of subs) {
+            visit(sub, true)
           }
         }
+      }
+
+      for (const root of roots) {
+        visit(root, false)
       }
       return result
     })
@@ -288,6 +393,43 @@ export default {
         return hay.includes(q)
       })
     })
+
+    const taskPassesFilters = (task) => {
+      if (statusFilter.value !== 'all' && task.status !== statusFilter.value) return false
+      const q = query.value.trim().toLowerCase()
+      if (!q) return true
+      const hay = `${task.title || ''} ${task.description || ''}`.toLowerCase()
+      return hay.includes(q)
+    }
+
+    const filteredSubtasksFor = (parentId) => {
+      const subs = tasksByParent.value[parentId] || []
+      return subs.filter(taskPassesFilters)
+    }
+
+    const groupedFilteredRows = computed(() => {
+      const rows = visibleTasksFiltered.value
+      const groups = []
+      let i = 0
+      while (i < rows.length) {
+        const row = rows[i]
+        if (!row.isChild) {
+          const parentItem = row
+          i++
+          while (i < rows.length && rows[i].isChild) {
+            i++
+          }
+          groups.push({ kind: 'block', parentItem })
+        } else {
+          groups.push({ kind: 'orphan', row })
+          i++
+        }
+      }
+      return groups
+    })
+
+    const blockKey = (block) =>
+      block.kind === 'block' ? `b-${block.parentItem.task.id}` : `o-${block.row.task.id}`
     const monthLabel = computed(() => format(currentDate.value, 'LLLL yyyy', { locale: dateLocale.value }))
     const calendarDays = computed(() => {
       const startMonth = startOfMonth(currentDate.value)
@@ -548,6 +690,28 @@ export default {
       fetchTimeEntries()
     })
 
+    provide('taskListUi', {
+      hasSubtasks,
+      isExpanded,
+      toggleSubtasks,
+      getRowClass,
+      goToTaskDetail,
+      getStatusText,
+      getStatusChipClass,
+      getProjectChipClass,
+      getCategoryChipClass,
+      getPriorityChipClass,
+      formatDate,
+      truncateText,
+      countdownLabelForTask,
+      toggleFavorite,
+      toggleTimeTracking,
+      editTask,
+      deleteTask,
+      getTimeTrackingIcon,
+      filteredSubtasksFor
+    })
+
     return {
       tasks,
       categories,
@@ -557,6 +721,9 @@ export default {
       filteredTasks,
       visibleTasks,
       visibleTasksFiltered,
+      groupedFilteredRows,
+      filteredSubtasksFor,
+      blockKey,
       monthLabel,
       weekDays,
       calendarDays,
@@ -707,12 +874,43 @@ export default {
 }
 
 .task-rows {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.task-row {
+.task-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+}
+
+/* Плавное сворачивание блока подзадач (высота), без transition-group / FLIP */
+.tasks-page :deep(.subtask-panel) {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.58s cubic-bezier(0.33, 1, 0.28, 1);
+}
+
+.tasks-page :deep(.subtask-panel--open) {
+  grid-template-rows: 1fr;
+}
+
+.tasks-page :deep(.subtask-panel-inner) {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tasks-page :deep(.subtask-panel--nested) {
+  margin-top: 0;
+}
+
+.tasks-page :deep(.task-row) {
   border-radius: 12px;
   padding: 10px 12px;
   border: 1px solid rgba(227, 211, 236, 0.88);
@@ -720,37 +918,36 @@ export default {
   justify-content: space-between;
   gap: 12px;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: box-shadow 0.22s ease;
   background: #ffffff;
   backdrop-filter: none;
 }
 
-.task-row:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 22px rgba(136, 110, 149, 0.18);
+.tasks-page :deep(.task-row:hover) {
+  box-shadow: 0 14px 28px rgba(136, 110, 149, 0.22);
 }
 
-.task-row:hover .task-actions {
+.tasks-page :deep(.task-row:hover .task-actions) {
   opacity: 1;
 }
 
-.row-todo { background: #fff9fd; border-left: 4px solid #ff6db8; }
-.row-progress { background: #f9f4ff; border-left: 4px solid #9b7bff; }
-.row-done { background: #f1fbf6; border-left: 4px solid #63c799; }
-.row-archived { background: #f7f4fb; border-left: 4px solid #bca8c9; }
+.tasks-page :deep(.row-todo) { background: #fff9fd; border-left: 4px solid #ff6db8; }
+.tasks-page :deep(.row-progress) { background: #f9f4ff; border-left: 4px solid #9b7bff; }
+.tasks-page :deep(.row-done) { background: #f1fbf6; border-left: 4px solid #63c799; }
+.tasks-page :deep(.row-archived) { background: #f7f4fb; border-left: 4px solid #bca8c9; }
 
-.task-title {
+.tasks-page :deep(.task-title) {
   margin: 0 0 2px 0;
   color: #2a2d4f;
 }
 
-.title-row {
+.tasks-page :deep(.title-row) {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.collapse-btn {
+.tasks-page :deep(.collapse-btn) {
   width: 24px;
   height: 24px;
   border: 1px solid rgba(193, 209, 238, 0.82);
@@ -762,25 +959,25 @@ export default {
   justify-content: center;
 }
 
-.collapse-placeholder {
+.tasks-page :deep(.collapse-placeholder) {
   width: 24px;
   height: 24px;
   display: inline-block;
 }
 
-.task-sub {
+.tasks-page :deep(.task-sub) {
   margin: 0 0 7px 0;
   color: #7d7696;
   font-size: 0.9rem;
 }
 
-.chips {
+.tasks-page :deep(.chips) {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.chip {
+.tasks-page :deep(.chip) {
   font-size: 0.74rem;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.96);
@@ -789,106 +986,106 @@ export default {
   color: #5b4e7f;
 }
 
-.chip.danger {
+.tasks-page :deep(.chip.danger) {
   background: #ffe8ea;
   border-color: #ffb8c0;
   color: #a33745;
 }
 
-.chip-status-todo {
+.tasks-page :deep(.chip-status-todo) {
   background: #ffe8f6;
   border-color: #ffc4e6;
   color: #9f3f7d;
 }
 
-.chip-status-progress {
+.tasks-page :deep(.chip-status-progress) {
   background: #efe7ff;
   border-color: #d4c1ff;
   color: #6846a8;
 }
 
-.chip-status-done {
+.tasks-page :deep(.chip-status-done) {
   background: #e9f9ef;
   border-color: #bcebcf;
   color: #2c8059;
 }
 
-.chip-status-archived {
+.tasks-page :deep(.chip-status-archived) {
   background: #f3eef8;
   border-color: #dbcee6;
   color: #705d86;
 }
 
-.chip-project-a { background: #e8f1ff; border-color: #bbd4ff; color: #315f9d; }
-.chip-project-b { background: #eafbf4; border-color: #bcecd4; color: #2f7a5d; }
-.chip-project-c { background: #fff2e8; border-color: #f4cfb4; color: #9b6438; }
-.chip-project-d { background: #f2ecff; border-color: #d7c6ff; color: #6146a8; }
+.tasks-page :deep(.chip-project-a) { background: #e8f1ff; border-color: #bbd4ff; color: #315f9d; }
+.tasks-page :deep(.chip-project-b) { background: #eafbf4; border-color: #bcecd4; color: #2f7a5d; }
+.tasks-page :deep(.chip-project-c) { background: #fff2e8; border-color: #f4cfb4; color: #9b6438; }
+.tasks-page :deep(.chip-project-d) { background: #f2ecff; border-color: #d7c6ff; color: #6146a8; }
 
-.chip-category-a { background: #fff6de; border-color: #f3e1a8; color: #8d6a13; }
-.chip-category-b { background: #ffecec; border-color: #ffc8c8; color: #a14444; }
-.chip-category-c { background: #e8f7ff; border-color: #b8e5fa; color: #2f6f93; }
-.chip-category-d { background: #eef7ea; border-color: #cfe7c1; color: #4e7a3f; }
+.tasks-page :deep(.chip-category-a) { background: #fff6de; border-color: #f3e1a8; color: #8d6a13; }
+.tasks-page :deep(.chip-category-b) { background: #ffecec; border-color: #ffc8c8; color: #a14444; }
+.tasks-page :deep(.chip-category-c) { background: #e8f7ff; border-color: #b8e5fa; color: #2f6f93; }
+.tasks-page :deep(.chip-category-d) { background: #eef7ea; border-color: #cfe7c1; color: #4e7a3f; }
 
-.chip-priority-low {
+.tasks-page :deep(.chip-priority-low) {
   background: #e8f7ff;
   border-color: #bfe7ff;
   color: #256e99;
 }
 
-.chip-priority-medium {
+.tasks-page :deep(.chip-priority-medium) {
   background: #fff5e1;
   border-color: #ffe0a9;
   color: #9a6b12;
 }
 
-.chip-priority-high {
+.tasks-page :deep(.chip-priority-high) {
   background: #ffe9d9;
   border-color: #ffc7a3;
   color: #b05b17;
 }
 
-.chip-priority-critical {
+.tasks-page :deep(.chip-priority-critical) {
   background: #ffe5ea;
   border-color: #ffb8c8;
   color: #ab2748;
 }
 
-.chip-priority-default {
+.tasks-page :deep(.chip-priority-default) {
   background: #f3f0ff;
   border-color: #ddd4ff;
   color: #5f4da5;
 }
 
-.chip.muted {
+.tasks-page :deep(.chip.muted) {
   color: #5f7398;
 }
 
-.chip.child {
+.tasks-page :deep(.chip.child) {
   background: rgba(220, 238, 255, 0.72);
   border-color: rgba(172, 206, 239, 0.82);
   color: #2f648f;
 }
 
-.chip-personal {
+.tasks-page :deep(.chip-personal) {
   background: rgba(243, 240, 255, 0.95);
   border-color: rgba(190, 180, 230, 0.75);
   color: #5a4a8a;
 }
 
-.chip-collaborative {
+.tasks-page :deep(.chip-collaborative) {
   background: linear-gradient(135deg, #e8f4ff, #f0f8ff);
   border-color: rgba(120, 170, 220, 0.55);
   color: #1d5a8a;
 }
 
-.chip-coworkers {
+.tasks-page :deep(.chip-coworkers) {
   background: rgba(232, 245, 255, 0.92);
   border-color: rgba(140, 190, 230, 0.65);
   color: #2d5f87;
   max-width: 100%;
 }
 
-.chip-timer-countdown {
+.tasks-page :deep(.chip-timer-countdown) {
   background: rgba(255, 248, 230, 0.95);
   border-color: rgba(220, 180, 90, 0.55);
   color: #8a5f12;
@@ -919,13 +1116,13 @@ export default {
   border-bottom: 1px dashed rgba(224, 206, 232, 0.65);
 }
 
-.icon-btn.star-btn.active {
+.tasks-page :deep(.icon-btn.star-btn.active) {
   color: #c9a227;
   border-color: rgba(212, 175, 55, 0.75);
   background: rgba(255, 248, 220, 0.95);
 }
 
-.task-actions {
+.tasks-page :deep(.task-actions) {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -933,13 +1130,17 @@ export default {
   transition: opacity 0.18s ease;
 }
 
-.task-row.is-child {
+.tasks-page :deep(.task-row.is-child) {
   margin-left: 28px;
   border-style: dashed;
   background-image: linear-gradient(90deg, rgba(106, 137, 211, 0.12), transparent 35%);
 }
 
-.icon-btn {
+.tasks-page :deep(.subtask-tree-node .task-row.is-child) {
+  margin-left: calc(12px + var(--sub-depth, 1) * 16px);
+}
+
+.tasks-page :deep(.icon-btn) {
   width: 30px;
   height: 30px;
   border-radius: 9px;
@@ -948,7 +1149,7 @@ export default {
   color: #5f4b84;
 }
 
-.icon-btn.danger {
+.tasks-page :deep(.icon-btn.danger) {
   color: #b4364a;
 }
 
@@ -968,27 +1169,19 @@ export default {
   }
 }
 
-.task-list-move {
-  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+@media (prefers-reduced-motion: reduce) {
+  .tasks-page :deep(.subtask-panel) {
+    transition: none;
+  }
 }
 
-.task-list-enter-active,
-.task-list-leave-active {
-  transition: opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.task-list-enter-from,
-.task-list-leave-to {
-  opacity: 0;
-}
-
-.collapse-chevron {
+.tasks-page :deep(.collapse-chevron) {
   display: block;
   transform: rotate(0deg);
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.collapse-chevron.is-open {
+.tasks-page :deep(.collapse-chevron.is-open) {
   transform: rotate(90deg);
 }
 

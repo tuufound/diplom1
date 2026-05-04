@@ -197,6 +197,7 @@ export default {
     titleHelp: 'Keep it short — easier to find later.',
     parentShortLabel: 'Parent',
     noParentTask: 'No parent task',
+    projectLockedByParent: 'Project matches the parent task and is set automatically.',
     parentHelp: 'If this is a subtask, pick a parent.',
     coworkersLabel: 'Co-assignees'
   },
@@ -303,6 +304,7 @@ export default {
     end: 'End',
     apply: 'Apply',
     loadError: 'Failed to load report data',
+    pdfError: 'Could not build the PDF. Try CSV export or reload the page.',
     totalTasks: 'Total tasks',
     closed: 'Closed',
     timeSpent: 'Time spent',

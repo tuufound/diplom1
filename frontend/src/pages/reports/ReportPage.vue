@@ -118,13 +118,12 @@
 </template>
 
 <script>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/utils/api'
 import { useToast } from 'vue-toastification'
 import { format, subDays, subMonths, subQuarters, subYears, parseISO, startOfDay } from 'date-fns'
 import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
 
 export default {
   name: 'ReportPage',
@@ -162,9 +161,10 @@ export default {
             end_date: endDate.value || undefined
           })
         ])
-        tasks.value = tasksResponse.data
-        timeEntries.value = timeEntriesResponse.data
-        report.value = reportResponse.data
+        tasks.value = Array.isArray(tasksResponse.data) ? tasksResponse.data : []
+        timeEntries.value = Array.isArray(timeEntriesResponse.data) ? timeEntriesResponse.data : []
+        const rep = reportResponse.data
+        report.value = rep && typeof rep === 'object' && !Array.isArray(rep) ? rep : {}
       } catch (error) {
         toast.error(t('reports.loadError'))
       } finally {
@@ -203,13 +203,6 @@ export default {
       }))
     })
 
-    const avgCompletionLabel = computed(() => {
-      void locale.value
-      const v = report.value?.avg_completion_seconds
-      if (v == null) return t('common.noData')
-      return formatSeconds(v)
-    })
-
     const getStatusText = (status) =>
       ['todo', 'in_progress', 'done', 'archived'].includes(status)
         ? t(`taskStatus.${status}`)
@@ -223,16 +216,6 @@ export default {
       return map[status] || '25%'
     }
 
-    const getTaskTime = (task) => {
-      const related = timeEntries.value.filter(entry => entry.task.id === task.id && entry.duration)
-      const total = related.reduce((sum, entry) => {
-        const parts = String(entry.duration).split(':')
-        if (parts.length !== 3) return sum
-        return sum + Number(parts[0]) * 3600 + Number(parts[1]) * 60 + Number(parts[2])
-      }, 0)
-      return formatSeconds(total)
-    }
-
     const formatSeconds = (seconds) => {
       const safeSeconds = Math.max(0, Number(seconds) || 0)
       const h = Math.floor(safeSeconds / 3600)
@@ -241,6 +224,29 @@ export default {
       if (m > 0) return t('reports.fmtM', { m })
       if (safeSeconds > 0) return t('reports.fmtS', { s: safeSeconds })
       return t('common.zeroMin')
+    }
+
+    const avgCompletionLabel = computed(() => {
+      void locale.value
+      const v = report.value?.avg_completion_seconds
+      if (v == null) return t('common.noData')
+      return formatSeconds(v)
+    })
+
+    const getTaskTime = (task) => {
+      const tid = task?.id
+      if (tid == null) return formatSeconds(0)
+      const related = timeEntries.value.filter((entry) => {
+        const et = entry?.task
+        const eid = typeof et === 'object' && et != null ? et.id : et
+        return eid === tid && entry.duration
+      })
+      const total = related.reduce((sum, entry) => {
+        const parts = String(entry.duration).split(':')
+        if (parts.length !== 3) return sum
+        return sum + Number(parts[0]) * 3600 + Number(parts[1]) * 60 + Number(parts[2])
+      }, 0)
+      return formatSeconds(total)
     }
 
     const setDateRange = () => {
@@ -275,13 +281,80 @@ export default {
 
     const applyFilters = () => fetchData()
 
-    const getRowsForExport = () => filteredTasks.value.map(task => ([
-      task.title,
-      getStatusText(task.status),
-      task.priority?.name || '-',
-      task.category?.name || '-',
-      getTaskTime(task)
-    ]))
+    const getRowsForExport = () =>
+      filteredTasks.value.map((task) => [
+        task.title,
+        getStatusText(task.status),
+        task.priority?.name || '—',
+        task.category?.name || '—',
+        getTaskTime(task)
+      ])
+
+    const escapeHtmlForPdf = (str) =>
+      String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+
+    /** Временный DOM для html2canvas: инлайн-стили, без scoped Vue — стабильнее снимок и кириллица */
+    const buildPdfExportHost = () => {
+      void locale.value
+      const thStyle =
+        'background:#2563eb;color:#fff;font-weight:600;padding:10px 12px;text-align:left;font-size:11px;'
+      const tdBase =
+        'padding:9px 12px;border-bottom:1px solid #e2e8f0;vertical-align:top;word-break:break-word;'
+      const title = escapeHtmlForPdf(t('reports.pdfTitle'))
+      const period = escapeHtmlForPdf(
+        `${t('reports.start')}: ${startDate.value || '—'} · ${t('reports.end')}: ${endDate.value || '—'}`
+      )
+      const columns = [
+        t('reports.exportTask'),
+        t('reports.exportStatus'),
+        t('reports.exportPriority'),
+        t('reports.exportCategory'),
+        t('reports.exportTime')
+      ]
+      const thead = `<tr>${columns.map((c) => `<th style="${thStyle}">${escapeHtmlForPdf(c)}</th>`).join('')}</tr>`
+      const rows = getRowsForExport()
+      let tbody
+      if (!rows.length) {
+        tbody = `<tr><td colspan="5" style="${tdBase}">${escapeHtmlForPdf(t('reports.noTasksPeriod'))}</td></tr>`
+      } else {
+        tbody = rows
+          .map(
+            (row, ri) =>
+              `<tr>${row
+                .map((cell) => {
+                  const bg = ri % 2 === 1 ? 'background:#f8fafc;' : ''
+                  return `<td style="${tdBase}${bg}">${escapeHtmlForPdf(String(cell))}</td>`
+                })
+                .join('')}</tr>`
+          )
+          .join('')
+      }
+      const wrap = document.createElement('div')
+      wrap.setAttribute('data-report-pdf-export', '1')
+      wrap.style.cssText = [
+        'box-sizing:border-box',
+        'width:720px',
+        'padding:28px 32px 36px',
+        'background:#ffffff',
+        'color:#0f172a',
+        'font:13px/1.5 system-ui,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif',
+        'text-align:left'
+      ].join(';')
+      wrap.innerHTML = `
+    <div style="margin-bottom:18px">
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a">${title}</h1>
+      <p style="margin:0;font-size:12px;color:#64748b">${period}</p>
+    </div>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0">
+      <thead>${thead}</thead>
+      <tbody>${tbody}</tbody>
+    </table>`
+      return wrap
+    }
 
     const exportCsv = () => {
       const header = [
@@ -303,25 +376,76 @@ export default {
       URL.revokeObjectURL(url)
     }
 
-    const exportPdf = () => {
-      const doc = new jsPDF()
-      doc.setFontSize(14)
-      doc.text(t('reports.pdfTitle'), 14, 16)
-      autoTable(doc, {
-        startY: 24,
-        head: [
-          [
-            t('reports.exportTask'),
-            t('reports.exportStatus'),
-            t('reports.exportPriority'),
-            t('reports.exportCategory'),
-            t('reports.exportTime')
-          ]
-        ],
-        body: getRowsForExport(),
-        styles: { fontSize: 9 }
-      })
-      doc.save(`report-${startDate.value || 'all'}-${endDate.value || 'all'}.pdf`)
+    const exportPdf = async () => {
+      let host = null
+      try {
+        const { default: html2canvas } = await import('html2canvas')
+        host = buildPdfExportHost()
+        // Нельзя opacity < 1: html2canvas переносит прозрачность в растр — PDF выглядит пустым.
+        host.style.position = 'fixed'
+        host.style.left = '-14000px'
+        host.style.top = '0'
+        host.style.opacity = '1'
+        host.style.visibility = 'visible'
+        host.style.pointerEvents = 'none'
+        host.style.zIndex = '2147483646'
+        document.body.appendChild(host)
+        await nextTick()
+        if (document.fonts?.ready) {
+          await document.fonts.ready.catch(() => {})
+        }
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+
+        const canvas = await html2canvas(host, {
+          scale: 2,
+          backgroundColor: '#ffffff',
+          logging: false,
+          useCORS: false,
+          foreignObjectRendering: false,
+          removeContainer: true
+        })
+
+        if (!canvas.width || !canvas.height) {
+          throw new Error('PDF canvas is empty')
+        }
+
+        let imgData
+        let imgFmt = 'PNG'
+        try {
+          imgData = canvas.toDataURL('image/png')
+        } catch {
+          imgData = canvas.toDataURL('image/jpeg', 0.92)
+          imgFmt = 'JPEG'
+        }
+
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+        const pageWidth = pdf.internal.pageSize.getWidth()
+        const pageHeight = pdf.internal.pageSize.getHeight()
+        const imgWidth = pageWidth
+        const imgHeight = (canvas.height * imgWidth) / canvas.width
+
+        let heightLeft = imgHeight
+        let position = 0
+
+        pdf.addImage(imgData, imgFmt, 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight
+          pdf.addPage()
+          pdf.addImage(imgData, imgFmt, 0, position, imgWidth, imgHeight)
+          heightLeft -= pageHeight
+        }
+
+        pdf.save(`report-${startDate.value || 'all'}-${endDate.value || 'all'}.pdf`)
+      } catch (err) {
+        console.error(err)
+        toast.error(t('reports.pdfError'))
+      } finally {
+        if (host?.parentNode) {
+          host.parentNode.removeChild(host)
+        }
+      }
     }
 
     watch(dateRange, () => {
@@ -617,4 +741,5 @@ export default {
     grid-template-columns: 1fr;
   }
 }
+
 </style>

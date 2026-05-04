@@ -88,15 +88,21 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label for="project" class="form-label">{{ $t('taskForm.projectLabel') }}</label>
-              <select class="form-select" id="project" v-model="form.project">
+              <select
+                class="form-select"
+                id="project"
+                v-model="form.project"
+                :disabled="!isEditing && !!form.parent_task"
+              >
                 <option value="">{{ $t('taskForm.personalProject') }}</option>
                 <option v-for="project in projects" :key="project.id" :value="project.id">
                   {{ project.name }}
                 </option>
               </select>
               <small class="form-help d-block mt-1">
-                {{ $t('taskForm.noProjectHint') }}
-                <router-link to="/projects">{{ $t('taskForm.goProjectsPage') }}</router-link>
+                <template v-if="!isEditing && form.parent_task">{{ $t('taskForm.projectLockedByParent') }}</template>
+                <template v-else>{{ $t('taskForm.noProjectHint') }}</template>
+                <router-link v-if="!form.parent_task || isEditing" to="/projects">{{ $t('taskForm.goProjectsPage') }}</router-link>
               </small>
             </div>
             <div class="col-md-6">
@@ -191,7 +197,7 @@
 </template>
 
 <script>
-import { ref, onMounted, computed, onUnmounted } from 'vue'
+import { ref, onMounted, computed, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import api from '@/utils/api'
@@ -306,6 +312,19 @@ export default {
       }
     }
 
+    /** Бэкенд требует совпадения project с родительской задачей — подтягиваем проект при выборе родителя. */
+    const syncProjectFromParent = async (parentId) => {
+      const id = Number(parentId)
+      if (!parentId || Number.isNaN(id)) return
+      try {
+        const { data } = await api.getTask(id)
+        form.value.project = data.project?.id ?? ''
+      } catch (error) {
+        console.error('syncProjectFromParent', error)
+        toast.error(t('taskForm.loadError'))
+      }
+    }
+
     const runUserSearch = async () => {
       const q = userSearchQuery.value.trim()
       if (q.length < 2) {
@@ -386,7 +405,16 @@ export default {
       }
     }
 
-    onMounted(() => {
+    watch(
+      () => form.value.parent_task,
+      (newParent) => {
+        if (isEditing.value) return
+        if (!newParent) return
+        syncProjectFromParent(newParent)
+      }
+    )
+
+    onMounted(async () => {
       if (!isEditing.value && route.query.parent) {
         form.value.parent_task = Number(route.query.parent)
       }
@@ -398,7 +426,7 @@ export default {
       fetchPriorities()
       fetchCategories()
       fetchProjects()
-      fetchAllTasks()
+      await fetchAllTasks()
     })
 
     onUnmounted(() => {

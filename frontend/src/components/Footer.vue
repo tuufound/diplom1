@@ -12,19 +12,39 @@
       </div>
 
       <div class="footer-links">
-        <a href="#" class="social-link" title="GitHub">
+        <a
+          class="social-link"
+          href="https://github.com/tuufound/diplom1"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="GitHub"
+        >
           <i class="fab fa-github"></i>
         </a>
-        <a href="#" class="social-link" title="Telegram">
+        <a
+          class="social-link"
+          :href="telegramHref"
+          :target="telegramHref === '#' ? undefined : '_blank'"
+          :rel="telegramHref === '#' ? undefined : 'noopener noreferrer'"
+          title="Telegram"
+        >
           <i class="fab fa-telegram"></i>
         </a>
-        <a href="#" class="social-link" title="Email">
+        <a class="social-link" :href="mailtoHref" title="Email">
           <i class="fas fa-envelope"></i>
         </a>
       </div>
 
       <div class="footer-right">
-        <div class="theme-toggle" @click="toggleTheme" :title="isDark ? $t('footer.themeLight') : $t('footer.themeDark')">
+        <div
+          class="theme-toggle"
+          role="button"
+          tabindex="0"
+          @click="toggleTheme"
+          @keydown.enter.prevent="toggleTheme"
+          @keydown.space.prevent="toggleTheme"
+          :title="isDark ? $t('footer.themeLight') : $t('footer.themeDark')"
+        >
           <i class="fas" :class="isDark ? 'fa-sun' : 'fa-moon'"></i>
         </div>
       </div>
@@ -43,6 +63,16 @@ export default {
     const currentYear = computed(() => new Date().getFullYear())
     const isDark = computed(() => themeStore.isDark)
 
+    const telegramHref = computed(() => {
+      const u = (import.meta.env.VITE_FOOTER_TELEGRAM_URL || '').trim()
+      return u || '#'
+    })
+
+    const mailtoHref = computed(() => {
+      const e = (import.meta.env.VITE_FOOTER_EMAIL || '').trim()
+      return e ? `mailto:${e}` : '#'
+    })
+
     const toggleTheme = () => {
       themeStore.toggleTheme()
     }
@@ -50,6 +80,8 @@ export default {
     return {
       currentYear,
       isDark,
+      telegramHref,
+      mailtoHref,
       toggleTheme
     }
   }
@@ -150,6 +182,11 @@ export default {
   background: var(--surface-2);
   color: var(--accent-primary);
   transform: rotate(15deg);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
 
 .theme-toggle i {

@@ -3,15 +3,15 @@
     <div class="page-content-surface">
       <div class="tasks-head">
         <div>
-          <h2 class="page-title"><i class="fas fa-list-check me-2"></i>Задачи</h2>
-          <p class="section-subtitle">Быстрый список: ищи, фильтруй, открывай детали.</p>
+          <h2 class="page-title"><i class="fas fa-list-check me-2"></i>{{ $t('tasksList.title') }}</h2>
+          <p class="section-subtitle">{{ $t('tasksList.subtitle') }}</p>
         </div>
         <div class="tasks-actions">
           <router-link to="/kanban" class="btn btn-outline-secondary">
-            <i class="fas fa-table-columns me-1"></i> Канбан
+            <i class="fas fa-table-columns me-1"></i> {{ $t('tasksList.kanban') }}
           </router-link>
           <router-link to="/tasks/create" class="btn btn-primary">
-            <i class="fas fa-plus me-1"></i> Новая задача
+            <i class="fas fa-plus me-1"></i> {{ $t('tasksList.newTask') }}
           </router-link>
         </div>
       </div>
@@ -21,30 +21,30 @@
           <div class="toolbar-row">
             <div class="search">
               <i class="fas fa-search"></i>
-              <input v-model="query" class="form-control" type="text" placeholder="Поиск по названию и описанию">
+              <input v-model="query" class="form-control" type="text" :placeholder="$t('tasksList.searchPlaceholder')">
             </div>
             <div class="status-filters scope-filters">
-              <button type="button" class="filter-pill" :class="{ active: taskScope === 'all' }" @click="setTaskScope('all')">Все задачи</button>
-              <button type="button" class="filter-pill" :class="{ active: taskScope === 'collaborative' }" @click="setTaskScope('collaborative')">Совместные</button>
-              <button type="button" class="filter-pill" :class="{ active: taskScope === 'favorites' }" @click="setTaskScope('favorites')"><i class="fas fa-star me-1"></i>Избранное</button>
+              <button type="button" class="filter-pill" :class="{ active: taskScope === 'all' }" @click="setTaskScope('all')">{{ $t('tasksList.allTasks') }}</button>
+              <button type="button" class="filter-pill" :class="{ active: taskScope === 'collaborative' }" @click="setTaskScope('collaborative')">{{ $t('tasksList.collaborative') }}</button>
+              <button type="button" class="filter-pill" :class="{ active: taskScope === 'favorites' }" @click="setTaskScope('favorites')"><i class="fas fa-star me-1"></i>{{ $t('tasksList.favorites') }}</button>
               <select
                 id="taskStatusFilter"
                 v-model="statusFilter"
                 class="form-select status-filter-select"
-                aria-label="Фильтр по статусу"
+                :aria-label="$t('tasksList.statusFilterAria')"
               >
-                <option value="all">Все статусы</option>
-                <option value="todo">К выполнению</option>
-                <option value="in_progress">В процессе</option>
-                <option value="done">Выполнено</option>
-                <option value="archived">Архив</option>
+                <option value="all">{{ $t('tasksList.allStatuses') }}</option>
+                <option value="todo">{{ $t('taskStatus.todo') }}</option>
+                <option value="in_progress">{{ $t('taskStatus.in_progress') }}</option>
+                <option value="done">{{ $t('taskStatus.done') }}</option>
+                <option value="archived">{{ $t('taskStatus.archived') }}</option>
               </select>
             </div>
           </div>
           <div class="kpis">
-            <span class="kpi">Активные: <strong>{{ activeTasksCount }}</strong></span>
-            <span class="kpi">Сегодня: <strong>{{ todayTasksCount }}</strong></span>
-            <span class="kpi">Просрочено: <strong>{{ overdueTasksCount }}</strong></span>
+            <span class="kpi">{{ $t('tasksList.kpiActive') }} <strong>{{ activeTasksCount }}</strong></span>
+            <span class="kpi">{{ $t('tasksList.kpiToday') }} <strong>{{ todayTasksCount }}</strong></span>
+            <span class="kpi">{{ $t('tasksList.kpiOverdue') }} <strong>{{ overdueTasksCount }}</strong></span>
           </div>
         </div>
       </div>
@@ -52,7 +52,7 @@
       <div v-if="visibleTasksFiltered.length === 0" class="empty-state card">
         <div class="card-body">
           <i class="fas fa-inbox"></i>
-          <p>Задачи не найдены</p>
+          <p>{{ $t('tasksList.empty') }}</p>
         </div>
       </div>
 
@@ -82,19 +82,19 @@
               <div class="chips">
                 <span class="chip" :class="getStatusChipClass(item.task.status)">{{ getStatusText(item.task.status) }}</span>
                 <span class="chip muted">{{ formatDate(item.task.created_at) }}</span>
-                <span v-if="!item.task.project" class="chip chip-personal">Личная</span>
-                <span v-if="item.task.project" class="chip chip-collaborative">Совместная</span>
+                <span v-if="!item.task.project" class="chip chip-personal">{{ $t('tasksList.personal') }}</span>
+                <span v-if="item.task.project" class="chip chip-collaborative">{{ $t('tasksList.collaborativeChip') }}</span>
                 <span v-if="item.task.project" class="chip" :class="getProjectChipClass(item.task.project?.id)">{{ item.task.project.name }}</span>
                 <span v-if="item.task.category" class="chip" :class="getCategoryChipClass(item.task.category?.id)">
                   <span class="me-1">{{ item.task.category.icon || '📁' }}</span>{{ item.task.category.name }}
                 </span>
                 <span v-if="item.task.priority" class="chip" :class="getPriorityChipClass(item.task.priority)">{{ item.task.priority.name }}</span>
-                <span v-if="item.isChild" class="chip child">Подзадача</span>
+                <span v-if="item.isChild" class="chip child">{{ $t('tasksList.subtaskChip') }}</span>
                 <span v-if="item.task.collaborators?.length" class="chip chip-coworkers">
                   <i class="fas fa-users me-1"></i>{{ item.task.collaborators.map((u) => u.username).join(', ') }}
                 </span>
                 <span v-if="countdownLabelForTask(item.task.id)" class="chip chip-timer-countdown">
-                  <i class="fas fa-bell me-1"></i>До сигнала: {{ countdownLabelForTask(item.task.id) }}
+                  <i class="fas fa-bell me-1"></i>{{ $t('tasksList.countdownBell') }} {{ countdownLabelForTask(item.task.id) }}
                 </span>
               </div>
             </div>
@@ -104,20 +104,20 @@
                 :class="{ active: item.task.is_favorited }"
                 type="button"
                 @click.stop="toggleFavorite(item.task)"
-                title="Избранное"
+                :title="$t('tasksList.favorite')"
               >
                 <i class="fas fa-star"></i>
               </button>
-              <button class="icon-btn" @click.stop="toggleTimeTracking(item.task)" :disabled="!item.task.can_edit" title="Таймер">
+              <button class="icon-btn" @click.stop="toggleTimeTracking(item.task)" :disabled="!item.task.can_edit" :title="$t('tasksList.timer')">
                 <i class="fas" :class="getTimeTrackingIcon(item.task)"></i>
               </button>
-              <button class="icon-btn" @click.stop="editTask(item.task.id)" :disabled="!item.task.can_edit" title="Редактировать">
+              <button class="icon-btn" @click.stop="editTask(item.task.id)" :disabled="!item.task.can_edit" :title="$t('common.edit')">
                 <i class="fas fa-pen"></i>
               </button>
-              <button class="icon-btn danger" @click.stop="deleteTask(item.task.id)" :disabled="!item.task.can_delete" title="Удалить">
+              <button class="icon-btn danger" @click.stop="deleteTask(item.task.id)" :disabled="!item.task.can_delete" :title="$t('common.delete')">
                 <i class="fas fa-trash"></i>
               </button>
-              <router-link class="icon-btn" :to="`/tasks/create?parent=${item.task.id}`" title="Подзадача">
+              <router-link class="icon-btn" :to="`/tasks/create?parent=${item.task.id}`" :title="$t('tasksList.subtask')">
                 <i class="fas fa-folder"></i>
               </router-link>
             </div>
@@ -128,38 +128,38 @@
         <div class="timer-modal card shadow" @click.stop>
           <div class="card-body">
             <h5 class="card-title mb-2">
-              <i class="fas fa-clock me-2 text-primary"></i>Таймер
+              <i class="fas fa-clock me-2 text-primary"></i>{{ $t('tasksList.timerModalTitle') }}
             </h5>
             <p v-if="timerModalTask" class="text-muted small mb-3">
-              Задача: <strong>{{ timerModalTask.title }}</strong>
+              {{ $t('tasksList.timerTaskLabel') }} <strong>{{ timerModalTask.title }}</strong>
             </p>
             <div class="mb-3">
-              <label class="form-label">Лимит времени (минуты)</label>
+              <label class="form-label">{{ $t('tasksList.limitMinutes') }}</label>
               <input
                 v-model.number="timerModalMinutes"
                 type="number"
                 class="form-control"
                 min="0"
                 max="720"
-                placeholder="0 — без сигнала"
+                :placeholder="$t('tasksList.limitPlaceholder')"
               >
-              <small class="form-text text-muted">0 — только учёт времени без обратного отсчёта и звука.</small>
+              <small class="form-text text-muted">{{ $t('tasksList.limitHint') }}</small>
             </div>
             <div class="form-check mb-2">
               <input id="tm-sound" v-model="timerModalSound" class="form-check-input" type="checkbox">
-              <label class="form-check-label" for="tm-sound">Звуковой сигнал по окончании</label>
+              <label class="form-check-label" for="tm-sound">{{ $t('tasksList.soundEnd') }}</label>
             </div>
             <div class="form-check mb-3">
               <input id="tm-stop" v-model="timerModalAutoStop" class="form-check-input" type="checkbox">
-              <label class="form-check-label" for="tm-stop">Остановить учёт времени, когда время выйдет</label>
+              <label class="form-check-label" for="tm-stop">{{ $t('tasksList.autoStop') }}</label>
             </div>
             <div class="d-flex flex-wrap gap-2 justify-content-between">
               <button type="button" class="btn btn-outline-secondary btn-sm" @click="playTimerPreview">
-                <i class="fas fa-volume-high me-1"></i>Проверить звук
+                <i class="fas fa-volume-high me-1"></i>{{ $t('tasksList.previewSound') }}
               </button>
               <div class="d-flex gap-2">
-                <button type="button" class="btn btn-outline-secondary" @click="timerModalOpen = false">Отмена</button>
-                <button type="button" class="btn btn-primary" @click="confirmStartTimer">Старт</button>
+                <button type="button" class="btn btn-outline-secondary" @click="timerModalOpen = false">{{ $t('tasksList.timerCancel') }}</button>
+                <button type="button" class="btn btn-primary" @click="confirmStartTimer">{{ $t('tasksList.timerStart') }}</button>
               </div>
             </div>
           </div>
@@ -171,17 +171,20 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import api from '@/utils/api'
 import { useToast } from 'vue-toastification'
 import { useTaskTimerCountdown } from '@/composables/useTaskTimerCountdown'
 import { playTimerExpirySound } from '@/utils/timerAlertSound'
+import { useAppDateLocale } from '@/composables/useAppDateLocale'
 import { format, startOfMonth, endOfMonth, startOfWeek, addDays, isSameMonth, isSameDay } from 'date-fns'
-import { ru } from 'date-fns/locale'
 
 export default {
   name: 'TaskListPage',
   setup() {
+    const { t } = useI18n()
+    const dateLocale = useAppDateLocale()
     const router = useRouter()
     const toast = useToast()
 
@@ -191,7 +194,15 @@ export default {
     const timeEntries = ref([])
     const loading = ref(false)
     const currentDate = ref(new Date())
-    const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+    const weekDays = computed(() => [
+      t('tasksList.wd0'),
+      t('tasksList.wd1'),
+      t('tasksList.wd2'),
+      t('tasksList.wd3'),
+      t('tasksList.wd4'),
+      t('tasksList.wd5'),
+      t('tasksList.wd6')
+    ])
     const expandedParents = ref({})
     const query = ref('')
     const statusFilter = ref('all')
@@ -212,7 +223,7 @@ export default {
         const response = await api.getTasks(params)
         tasks.value = response.data
       } catch (error) {
-        toast.error('Ошибка загрузки задач')
+        toast.error(t('tasksList.loadError'))
         console.error('Error fetching tasks:', error)
       } finally {
         loading.value = false
@@ -277,7 +288,7 @@ export default {
         return hay.includes(q)
       })
     })
-    const monthLabel = computed(() => format(currentDate.value, 'LLLL yyyy', { locale: ru }))
+    const monthLabel = computed(() => format(currentDate.value, 'LLLL yyyy', { locale: dateLocale.value }))
     const calendarDays = computed(() => {
       const startMonth = startOfMonth(currentDate.value)
       const endMonth = endOfMonth(currentDate.value)
@@ -314,7 +325,7 @@ export default {
     } = useTaskTimerCountdown(timeEntries, {
       stopEntry: async (entryId) => {
         await api.stopTimeEntry(entryId)
-        toast.success('Таймер остановлен по лимиту')
+        toast.success(t('tasksList.timerStoppedLimit'))
         await fetchTimeEntries()
       }
     })
@@ -326,25 +337,25 @@ export default {
     const editTask = (taskId) => {
       const task = tasks.value.find(item => item.id === taskId)
       if (task && !task.can_edit) {
-        toast.error('Режим просмотра: редактирование недоступно')
+        toast.error(t('tasksList.viewOnlyEdit'))
         return
       }
       router.push(`/tasks/${taskId}/edit`)
     }
 
     const deleteTask = async (taskId) => {
-      if (confirm('Вы уверены, что хотите удалить эту задачу?')) {
+      if (confirm(t('tasksList.deleteConfirm'))) {
         const task = tasks.value.find(item => item.id === taskId)
         if (task && !task.can_delete) {
-          toast.error('Удаление недоступно')
+          toast.error(t('tasksList.deleteDenied'))
           return
         }
         try {
           await api.deleteTask(taskId)
-          toast.success('Задача успешно удалена')
+          toast.success(t('tasksList.deleteOk'))
           await fetchTasks()
         } catch (error) {
-          toast.error('Ошибка удаления задачи')
+          toast.error(t('tasksList.deleteError'))
           console.error('Error deleting task:', error)
         }
       }
@@ -357,10 +368,10 @@ export default {
           clearStoredCountdown()
         }
         await api.stopTimeEntry(entryId)
-        toast.success('Таймер остановлен')
+        toast.success(t('tasksList.timerStopped'))
         await fetchTimeEntries()
       } catch (error) {
-        toast.error('Ошибка остановки таймера')
+        toast.error(t('tasksList.timerStopError'))
         console.error('Error stopping time tracking:', error)
       }
     }
@@ -383,12 +394,12 @@ export default {
       if (!task?.can_edit) return
       const mins = Number(timerModalMinutes.value)
       if (!Number.isFinite(mins) || mins < 0) {
-        toast.error('Укажите неотрицательное число минут')
+        toast.error(t('tasksList.minutesNonNegative'))
         return
       }
       try {
-        const { data } = await api.startTimeEntry(task.id, { description: 'Таймер' })
-        toast.success('Таймер запущен')
+        const { data } = await api.startTimeEntry(task.id, { description: t('tasksList.timer') })
+        toast.success(t('tasksList.timerStarted'))
         if (mins > 0) {
           scheduleCountdown(data.id, mins, timerModalSound.value, timerModalAutoStop.value)
         } else {
@@ -397,7 +408,7 @@ export default {
         timerModalOpen.value = false
         await fetchTimeEntries()
       } catch (error) {
-        toast.error('Ошибка запуска таймера')
+        toast.error(t('tasksList.timerStartError'))
         console.error('Error starting time tracking:', error)
       }
     }
@@ -407,13 +418,9 @@ export default {
     }
 
     const getStatusText = (status) => {
-      const statusMap = {
-        'todo': 'К выполнению',
-        'in_progress': 'В процессе',
-        'done': 'Выполнено',
-        'archived': 'В архиве'
-      }
-      return statusMap[status] || status
+      const key = `taskStatus.${status}`
+      const translated = t(key)
+      return translated !== key ? translated : status
     }
 
     const getStatusBadgeClass = (status) => {
@@ -458,7 +465,7 @@ export default {
 
     const formatDate = (dateString) => {
       if (!dateString) return ''
-      return format(new Date(dateString), 'dd MMM yyyy, HH:mm', { locale: ru })
+      return format(new Date(dateString), 'dd MMM yyyy, HH:mm', { locale: dateLocale.value })
     }
 
     const truncateText = (text, length) => {
@@ -502,7 +509,7 @@ export default {
         return
       }
       if (!task.can_edit) {
-        toast.error('Режим просмотра: запуск таймера недоступен')
+        toast.error(t('tasksList.viewOnlyTimer'))
         return
       }
       timerModalTask.value = task
@@ -526,7 +533,7 @@ export default {
         }
         task.is_favorited = data.is_favorited
       } catch (error) {
-        toast.error('Не удалось обновить избранное')
+        toast.error(t('tasksList.favoriteError'))
         console.error('toggleFavorite', error)
       }
     }

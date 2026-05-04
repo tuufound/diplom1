@@ -5,15 +5,15 @@
     <div class="page-header">
       <div class="header-left">
         <h2 class="page-title">
-          <i class="fas fa-folder me-2"></i>Проекты
+          <i class="fas fa-folder me-2"></i>{{ $t('projects.title') }}
         </h2>
-        <p class="section-subtitle">Организуй задачи по пространствам и пригласи команду</p>
+        <p class="section-subtitle">{{ $t('projects.subtitle') }}</p>
       </div>
       <div class="header-stats">
         <div class="stat-badge">
           <i class="fas fa-layer-group"></i>
           <span>{{ projects.length }}</span>
-          <small>проектов</small>
+          <small>{{ $t('projects.statProjects') }}</small>
         </div>
       </div>
     </div>
@@ -24,31 +24,31 @@
         <div class="card create-card">
           <div class="card-header">
             <h5 class="mb-0">
-              <i class="fas fa-plus-circle me-2"></i>Новый проект
+              <i class="fas fa-plus-circle me-2"></i>{{ $t('projects.newCard') }}
             </h5>
           </div>
           <div class="card-body">
             <div class="form-group">
               <label class="form-label">
-                <i class="fas fa-tag me-1"></i>Название
+                <i class="fas fa-tag me-1"></i>{{ $t('projects.nameLabel') }}
               </label>
               <input
                 v-model.trim="createForm.name"
                 type="text"
                 class="form-control"
                 maxlength="120"
-                placeholder="Например: Диплом, Релиз 2.0"
+                :placeholder="$t('projects.namePh')"
               >
             </div>
             <div class="form-group">
               <label class="form-label">
-                <i class="fas fa-align-left me-1"></i>Описание
+                <i class="fas fa-align-left me-1"></i>{{ $t('projects.descLabel') }}
               </label>
               <textarea
                 v-model.trim="createForm.description"
                 class="form-control"
                 rows="3"
-                placeholder="Краткое описание проекта..."
+                :placeholder="$t('projects.descPh')"
               />
             </div>
             <button
@@ -59,7 +59,7 @@
             >
               <span v-if="creating" class="spinner-border spinner-border-sm me-2" />
               <i v-else class="fas fa-rocket me-2"></i>
-              Создать проект
+              {{ $t('projects.createBtn') }}
             </button>
           </div>
         </div>
@@ -73,7 +73,7 @@
             <div class="loading-spinner">
               <i class="fas fa-circle-notch fa-spin fa-2x"></i>
             </div>
-            <p class="mt-2 mb-0 text-muted">Загрузка проектов...</p>
+            <p class="mt-2 mb-0 text-muted">{{ $t('projects.loading') }}</p>
           </div>
         </div>
 
@@ -83,8 +83,8 @@
             <div class="empty-icon">
               <i class="fas fa-folder-tree"></i>
             </div>
-            <h5 class="mt-3 mb-2">Пока нет проектов</h5>
-            <p class="text-muted mb-0">Создай первый проект слева и начни организовывать задачи</p>
+            <h5 class="mt-3 mb-2">{{ $t('projects.emptyTitle') }}</h5>
+            <p class="text-muted mb-0">{{ $t('projects.emptyText') }}</p>
           </div>
         </div>
 
@@ -99,18 +99,18 @@
               <div class="project-title-area">
                 <template v-if="editingId !== project.id">
                   <h5 class="project-name">{{ project.name }}</h5>
-                  <p class="project-desc">{{ project.description || 'Без описания' }}</p>
+                  <p class="project-desc">{{ project.description || $t('projects.noDesc') }}</p>
                 </template>
                 <template v-else>
                   <div class="edit-form">
-                    <input v-model.trim="editForm.name" type="text" class="form-control mb-2" placeholder="Название">
-                    <textarea v-model.trim="editForm.description" class="form-control" rows="2" placeholder="Описание" />
+                    <input v-model.trim="editForm.name" type="text" class="form-control mb-2" :placeholder="$t('projects.namePhEdit')">
+                    <textarea v-model.trim="editForm.description" class="form-control" rows="2" :placeholder="$t('projects.descPhEdit')" />
                     <div class="edit-actions mt-2">
                       <button class="btn btn-sm btn-primary" :disabled="saving" @click="saveEdit(project.id)">
-                        <i class="fas fa-check me-1"></i>Сохранить
+                        <i class="fas fa-check me-1"></i>{{ $t('projects.saveBtn') }}
                       </button>
                       <button class="btn btn-sm btn-outline-secondary" :disabled="saving" @click="cancelEdit">
-                        <i class="fas fa-times me-1"></i>Отмена
+                        <i class="fas fa-times me-1"></i>{{ $t('common.cancel') }}
                       </button>
                     </div>
                   </div>
@@ -126,7 +126,7 @@
               </div>
               <div class="meta-item">
                 <i class="fas fa-users"></i>
-                <span>{{ participantCount(project) }} участ.</span>
+                <span>{{ participantCount(project) }} {{ $t('projects.memberAbbr') }}</span>
               </div>
             </div>
 
@@ -156,12 +156,12 @@
             <!-- Card Actions -->
             <div v-if="editingId !== project.id" class="project-card-actions">
               <router-link class="btn btn-sm btn-primary" :to="`/tasks/create?project=${project.id}`">
-                <i class="fas fa-plus me-1"></i>Задача
+                <i class="fas fa-plus me-1"></i>{{ $t('projects.taskBtn') }}
               </router-link>
               <button
                 v-if="canEditProject(project)"
                 class="btn btn-sm btn-outline-secondary"
-                title="Редактировать"
+                :title="$t('common.edit')"
                 @click="startEdit(project)"
               >
                 <i class="fas fa-pen"></i>
@@ -169,7 +169,7 @@
               <button
                 v-if="isProjectOwner(project)"
                 class="btn btn-sm btn-outline-danger"
-                title="Удалить"
+                :title="$t('common.delete')"
                 @click="confirmDelete(project)"
               >
                 <i class="fas fa-trash"></i>
@@ -184,30 +184,30 @@
                 @click="toggleInvite(project.id)"
               >
                 <i class="fas fa-user-plus me-2"></i>
-                {{ expandedProject === project.id ? 'Скрыть' : 'Пригласить' }}
+                {{ expandedProject === project.id ? $t('projects.hide') : $t('projects.invite') }}
                 <i class="fas fa-chevron-down ms-auto"></i>
               </button>
 
               <div v-if="expandedProject === project.id" class="invite-form">
                 <div class="invite-field">
-                  <label class="invite-label" :for="`invite-role-${project.id}`">Роль</label>
+                  <label class="invite-label" :for="`invite-role-${project.id}`">{{ $t('projects.roleLabel') }}</label>
                   <select
                     :id="`invite-role-${project.id}`"
                     v-model="inviteRoleByProject[project.id]"
                     class="form-select"
                   >
-                    <option value="editor">Редактор</option>
-                    <option value="viewer">Наблюдатель</option>
+                    <option value="editor">{{ $t('projects.editor') }}</option>
+                    <option value="viewer">{{ $t('projects.viewer') }}</option>
                   </select>
                 </div>
                 <div class="invite-field">
-                  <label class="invite-label" :for="`invite-login-${project.id}`">Логин</label>
+                  <label class="invite-label" :for="`invite-login-${project.id}`">{{ $t('projects.loginLabel') }}</label>
                   <input
                     :id="`invite-login-${project.id}`"
                     v-model.trim="inviteQueryByProject[project.id]"
                     type="text"
                     class="form-control"
-                    placeholder="Введите логин"
+                    :placeholder="$t('projects.loginPh')"
                     autocomplete="username"
                     @input="onInviteInput(project.id)"
                     @keydown.enter.prevent="inviteByLogin(project)"
@@ -221,7 +221,7 @@
                 >
                   <span v-if="inviteLoading === project.id" class="spinner-border spinner-border-sm" />
                   <template v-else>
-                    <i class="fas fa-user-plus me-1" />Пригласить
+                    <i class="fas fa-user-plus me-1" />{{ $t('projects.inviteBtn') }}
                   </template>
                 </button>
 
@@ -252,7 +252,7 @@
                 :class="{ active: expandedMembers === project.id }"
                 @click="toggleMembers(project.id)"
               >
-                <i class="fas fa-users me-2"></i>Участники
+                <i class="fas fa-users me-2"></i>{{ $t('projects.members') }}
                 <span class="members-count">{{ participantCount(project) }}</span>
                 <i class="fas fa-chevron-down ms-auto"></i>
               </button>
@@ -262,7 +262,7 @@
                   <div class="member-avatar-lg owner-avatar">{{ getInitials(project.owner?.username) }}</div>
                   <div class="member-info">
                     <span class="member-name">{{ project.owner?.username }}</span>
-                    <span class="member-role-badge owner-badge">владелец</span>
+                    <span class="member-role-badge owner-badge">{{ $t('projectRole.owner') }}</span>
                   </div>
                 </div>
                 <div
@@ -281,7 +281,7 @@
                     v-if="isProjectOwner(project)"
                     type="button"
                     class="btn btn-sm btn-outline-danger remove-btn"
-                    title="Удалить из проекта"
+                    :title="$t('projects.removeMember')"
                     @click="removeMember(project, m)"
                   >
                     <i class="fas fa-times"></i>
@@ -299,6 +299,7 @@
 
 <script>
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
 import api from '@/utils/api'
@@ -306,6 +307,7 @@ import api from '@/utils/api'
 export default {
   name: 'ProjectsPage',
   setup() {
+    const { t } = useI18n()
     const authStore = useAuthStore()
     const toast = useToast()
     const user = computed(() => authStore.user)
@@ -345,10 +347,8 @@ export default {
       return r === 'owner' || r === 'editor'
     }
 
-    const roleLabel = (role) => {
-      const map = { owner: 'владелец', editor: 'редактор', viewer: 'наблюдатель' }
-      return map[role] || role
-    }
+    const roleLabel = (role) =>
+      role && ['owner', 'editor', 'viewer'].includes(role) ? t(`projectRole.${role}`) : role
 
     /** Участники без дубликата владельца (владелец показывается отдельной строкой). */
     const membershipsWithoutOwner = (p) =>
@@ -375,7 +375,7 @@ export default {
           }
         }
       } catch (e) {
-        toast.error(e.response?.data?.detail || 'Не удалось загрузить проекты')
+        toast.error(e.response?.data?.detail || t('projects.loadError'))
         projects.value = []
       } finally {
         loading.value = false
@@ -391,15 +391,15 @@ export default {
           name,
           description: createForm.value.description.trim() || ''
         })
-        toast.success('Проект создан')
+        toast.success(t('projects.created'))
         createForm.value = { name: '', description: '' }
         await loadProjects()
       } catch (e) {
         const msg =
           e.response?.data?.name?.[0] ||
           e.response?.data?.detail ||
-          'Ошибка создания проекта'
-        toast.error(typeof msg === 'string' ? msg : 'Ошибка создания проекта')
+          t('projects.createError')
+        toast.error(typeof msg === 'string' ? msg : t('projects.createError'))
       } finally {
         creating.value = false
       }
@@ -417,7 +417,7 @@ export default {
     const saveEdit = async (id) => {
       const name = editForm.value.name.trim()
       if (!name) {
-        toast.error('Укажите название')
+        toast.error(t('projects.nameRequired'))
         return
       }
       saving.value = true
@@ -426,28 +426,28 @@ export default {
           name,
           description: editForm.value.description.trim() || ''
         })
-        toast.success('Проект обновлён')
+        toast.success(t('projects.updated'))
         editingId.value = null
         await loadProjects()
       } catch (e) {
-        toast.error(e.response?.data?.detail || 'Ошибка сохранения')
+        toast.error(e.response?.data?.detail || t('projects.saveError'))
       } finally {
         saving.value = false
       }
     }
 
     const confirmDelete = (p) => {
-      if (!window.confirm(`Удалить проект «${p.name}»? Задачи останутся без проекта.`)) return
+      if (!window.confirm(t('projects.deleteProjectConfirm', { name: p.name }))) return
       deleteProject(p.id)
     }
 
     const deleteProject = async (id) => {
       try {
         await api.deleteProject(id)
-        toast.success('Проект удалён')
+        toast.success(t('projects.deleted'))
         await loadProjects()
       } catch (e) {
-        toast.error(e.response?.data?.detail || 'Не удалось удалить')
+        toast.error(e.response?.data?.detail || t('projects.deleteError'))
       }
     }
 
@@ -489,20 +489,20 @@ export default {
     const inviteByLogin = async (p) => {
       const login = String(inviteQueryByProject[p.id] || '').trim()
       if (!login) {
-        toast.error('Введите логин пользователя')
+        toast.error(t('projects.loginRequired'))
         return
       }
       const role = inviteRoleByProject[p.id] || 'editor'
       inviteLoading.value = p.id
       try {
         await api.addProjectMembership(p.id, { username: login, role })
-        toast.success(`Приглашён: ${login}`)
+        toast.success(t('projects.invited', { login }))
         inviteQueryByProject[p.id] = ''
         inviteHitsByProject[p.id] = []
         await loadProjects()
       } catch (e) {
-        const msg = membershipErrorMessage(e.response?.data) || 'Не удалось добавить участника'
-        toast.error(typeof msg === 'string' ? msg : 'Ошибка')
+        const msg = membershipErrorMessage(e.response?.data) || t('projects.addMemberError')
+        toast.error(typeof msg === 'string' ? msg : t('projects.error'))
       } finally {
         inviteLoading.value = null
       }
@@ -513,26 +513,27 @@ export default {
       inviteLoading.value = p.id
       try {
         await api.addProjectMembership(p.id, { user_id: u.id, role })
-        toast.success(`Добавлен: ${u.username}`)
+        toast.success(t('projects.added', { name: u.username }))
         inviteQueryByProject[p.id] = ''
         inviteHitsByProject[p.id] = []
         await loadProjects()
       } catch (e) {
-        const msg = membershipErrorMessage(e.response?.data) || 'Не удалось добавить участника'
-        toast.error(typeof msg === 'string' ? msg : 'Ошибка')
+        const msg = membershipErrorMessage(e.response?.data) || t('projects.addMemberError')
+        toast.error(typeof msg === 'string' ? msg : t('projects.error'))
       } finally {
         inviteLoading.value = null
       }
     }
 
     const removeMember = async (p, m) => {
-      if (!window.confirm(`Удалить ${m.user?.username} из проекта?`)) return
+      if (!window.confirm(t('projects.removeMemberConfirm', { name: m.user?.username || '' })))
+        return
       try {
         await api.removeProjectMembership(p.id, m.id)
-        toast.success(`Участник удалён`)
+        toast.success(t('projects.memberRemoved'))
         await loadProjects()
       } catch (e) {
-        toast.error(e.response?.data?.detail || 'Не удалось удалить участника')
+        toast.error(e.response?.data?.detail || t('projects.memberDeleteError'))
       }
     }
 

@@ -5,9 +5,9 @@
       <div>
         <h2 class="page-title">
           <i class="fas" :class="isEditing ? 'fa-edit' : 'fa-plus'"></i>
-          {{ isEditing ? 'Редактирование' : 'Новая задача' }}
+          {{ isEditing ? $t('taskForm.editTitle') : $t('taskForm.newTitle') }}
         </h2>
-        <p class="section-subtitle">Заполни только важное — остальное можно добавить позже.</p>
+        <p class="section-subtitle">{{ $t('taskForm.subtitle') }}</p>
       </div>
       <div class="form-head-actions">
         <button
@@ -16,14 +16,14 @@
           class="btn btn-outline-secondary favorite-head-btn"
           :class="{ active: isFavorited }"
           :disabled="favoriteLoading"
-          title="Избранное"
+          :title="$t('taskForm.favorite')"
           @click="toggleFavorite"
         >
           <i class="fas fa-star me-1"></i>
-          {{ isFavorited ? 'В избранном' : 'В избранное' }}
+          {{ isFavorited ? $t('taskForm.inFavorites') : $t('taskForm.addFavorite') }}
         </button>
         <button type="button" class="btn btn-outline-secondary" @click="cancel">
-          <i class="fas fa-arrow-left me-1"></i> К списку
+          <i class="fas fa-arrow-left me-1"></i> {{ $t('taskForm.backList') }}
         </button>
       </div>
     </div>
@@ -31,28 +31,28 @@
     <form class="form-grid" @submit.prevent="handleSubmit">
       <div class="card form-card">
         <div class="card-body">
-          <div class="form-section-title">Основное</div>
+          <div class="form-section-title">{{ $t('taskForm.mainSection') }}</div>
           <div class="mb-3">
-            <label for="title" class="form-label">Название</label>
+            <label for="title" class="form-label">{{ $t('taskForm.titleLabel') }}</label>
             <input
               type="text"
               class="form-control"
               id="title"
               v-model="form.title"
-              placeholder="Например: Подготовить отчет"
+              :placeholder="$t('taskForm.titlePh')"
               required
             >
-            <small class="form-help">Коротко: так задачу проще найти.</small>
+            <small class="form-help">{{ $t('taskForm.titleHelp') }}</small>
           </div>
 
           <div class="mb-3">
-            <label for="description" class="form-label">Описание</label>
+            <label for="description" class="form-label">{{ $t('taskForm.descLabel') }}</label>
             <textarea
               class="form-control"
               id="description"
               v-model="form.description"
               rows="4"
-              placeholder="Контекст, критерии готовности, ссылки…"
+              :placeholder="$t('taskForm.descPh')"
             ></textarea>
           </div>
         </div>
@@ -60,21 +60,21 @@
 
       <div class="card form-card">
         <div class="card-body">
-          <div class="form-section-title">Статус и приоритет</div>
+          <div class="form-section-title">{{ $t('taskForm.statusPriority') }}</div>
           <div class="row g-3">
             <div class="col-md-6">
-              <label for="status" class="form-label">Статус</label>
+              <label for="status" class="form-label">{{ $t('taskForm.statusLabel') }}</label>
               <select class="form-select" id="status" v-model="form.status" required>
-                <option value="todo">К выполнению</option>
-                <option value="in_progress">В процессе</option>
-                <option value="done">Выполнено</option>
-                <option value="archived">В архиве</option>
+                <option value="todo">{{ $t('taskStatus.todo') }}</option>
+                <option value="in_progress">{{ $t('taskStatus.in_progress') }}</option>
+                <option value="done">{{ $t('taskStatus.done') }}</option>
+                <option value="archived">{{ $t('taskStatus.archived') }}</option>
               </select>
             </div>
             <div class="col-md-6">
-              <label for="priority" class="form-label">Приоритет</label>
+              <label for="priority" class="form-label">{{ $t('taskForm.priorityLabel') }}</label>
               <select class="form-select" id="priority" v-model="form.priority">
-                <option value="">Без приоритета</option>
+                <option value="">{{ $t('taskForm.noPriority') }}</option>
                 <option v-for="priority in priorities" :key="priority.id" :value="priority.id">
                   {{ priority.name }}
                 </option>
@@ -84,32 +84,32 @@
 
           <div class="divider"></div>
 
-          <div class="form-section-title">Контекст</div>
+          <div class="form-section-title">{{ $t('taskForm.contextSection') }}</div>
           <div class="row g-3">
             <div class="col-md-6">
-              <label for="project" class="form-label">Проект</label>
+              <label for="project" class="form-label">{{ $t('taskForm.projectLabel') }}</label>
               <select class="form-select" id="project" v-model="form.project">
-                <option value="">Личная задача (без проекта)</option>
+                <option value="">{{ $t('taskForm.personalProject') }}</option>
                 <option v-for="project in projects" :key="project.id" :value="project.id">
                   {{ project.name }}
                 </option>
               </select>
               <small class="form-help d-block mt-1">
-                Нет нужного проекта?
-                <router-link to="/projects">Создай на странице «Проекты»</router-link>
+                {{ $t('taskForm.noProjectHint') }}
+                <router-link to="/projects">{{ $t('taskForm.goProjectsPage') }}</router-link>
               </small>
             </div>
             <div class="col-md-6">
-              <label for="category" class="form-label">Категория</label>
+              <label for="category" class="form-label">{{ $t('taskForm.categoryLabel') }}</label>
               <select class="form-select" id="category" v-model="form.category">
-                <option value="">Без категории</option>
+                <option value="">{{ $t('taskForm.noCategory') }}</option>
                 <option v-for="category in categories" :key="category.id" :value="category.id">
                   {{ category.icon || '📁' }} {{ category.name }}
                 </option>
               </select>
             </div>
             <div class="col-md-6">
-              <label for="due_date" class="form-label">Срок</label>
+              <label for="due_date" class="form-label">{{ $t('taskForm.dueLabel') }}</label>
               <input
                 type="datetime-local"
                 class="form-control"
@@ -118,30 +118,30 @@
               >
             </div>
             <div class="col-md-6">
-              <label for="parent_task" class="form-label">Родитель</label>
+              <label for="parent_task" class="form-label">{{ $t('taskForm.parentShortLabel') }}</label>
               <select class="form-select" id="parent_task" v-model="form.parent_task">
-                <option value="">Без родительской задачи</option>
+                <option value="">{{ $t('taskForm.noParentTask') }}</option>
                 <option v-for="task in availableParentTasks" :key="task.id" :value="task.id">
                   {{ task.title }}
                 </option>
               </select>
-              <small class="form-help">Если это подзадача — выбери родителя.</small>
+              <small class="form-help">{{ $t('taskForm.parentHelp') }}</small>
             </div>
           </div>
 
           <template v-if="canManageCollaborators">
             <div class="divider"></div>
-            <div class="form-section-title">Совместная работа</div>
+            <div class="form-section-title">{{ $t('taskForm.coworkers') }}</div>
             <div class="mb-3">
-              <label class="form-label" for="coworker-search">Соавторы</label>
-              <small class="form-help d-block mb-2">Приглашённые пользователи смогут редактировать задачу и вести учёт времени. Поиск по логину (от 2 символов).</small>
+              <label class="form-label" for="coworker-search">{{ $t('taskForm.coworkersLabel') }}</label>
+              <small class="form-help d-block mb-2">{{ $t('taskForm.coworkersHelp') }}</small>
               <input
                 id="coworker-search"
                 v-model="userSearchQuery"
                 type="text"
                 class="form-control"
                 autocomplete="off"
-                placeholder="Например: alex"
+                :placeholder="$t('taskForm.coworkerPh')"
                 @input="onSearchInput"
               >
               <ul v-if="searchResults.length" class="coworker-hits list-unstyled mb-0 mt-2">
@@ -154,22 +154,22 @@
               <div v-if="selectedCollaborators.length" class="coworker-chips mt-2">
                 <span v-for="c in selectedCollaborators" :key="c.id" class="coworker-chip">
                   {{ c.username }}
-                  <button type="button" class="chip-remove" title="Убрать" @click="removeCollaborator(c.id)">×</button>
+                  <button type="button" class="chip-remove" :title="$t('taskForm.removeCoworker')" @click="removeCollaborator(c.id)">×</button>
                 </span>
               </div>
             </div>
           </template>
           <div v-else-if="isEditing && selectedCollaborators.length" class="mt-2">
-            <div class="form-section-title">Соавторы</div>
+            <div class="form-section-title">{{ $t('taskForm.coworkersLabel') }}</div>
             <p class="form-help mb-0">{{ selectedCollaborators.map((c) => c.username).join(', ') }}</p>
           </div>
 
           <div class="divider"></div>
 
-          <div class="form-section-title">Активность</div>
+          <div class="form-section-title">{{ $t('taskForm.activity') }}</div>
           <div class="form-check">
             <input type="checkbox" class="form-check-input" id="is_active" v-model="form.is_active">
-            <label class="form-check-label" for="is_active">Активная задача</label>
+            <label class="form-check-label" for="is_active">{{ $t('taskForm.activeTask') }}</label>
           </div>
         </div>
       </div>
@@ -178,10 +178,10 @@
         <div class="card-body action-bar">
           <button type="submit" class="btn btn-primary" :disabled="loading">
             <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
-            <span>{{ isEditing ? 'Сохранить' : 'Создать' }}</span>
+            <span>{{ isEditing ? $t('common.save') : $t('taskForm.create') }}</span>
           </button>
           <button type="button" class="btn btn-outline-secondary" @click="cancel">
-            Отмена
+            {{ $t('common.cancel') }}
           </button>
         </div>
       </div>
@@ -193,12 +193,14 @@
 <script>
 import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import api from '@/utils/api'
 import { useToast } from 'vue-toastification'
 
 export default {
   name: 'TaskFormPage',
   setup() {
+    const { t } = useI18n()
     const route = useRoute()
     const router = useRouter()
     const toast = useToast()
@@ -262,7 +264,7 @@ export default {
             username: c.username
           }))
         } catch (error) {
-          toast.error('Ошибка загрузки задачи')
+          toast.error(t('taskForm.loadError'))
           console.error('Error fetching task:', error)
         }
       }
@@ -352,14 +354,14 @@ export default {
         }
         if (isEditing.value) {
           await api.updateTask(route.params.id, payload)
-          toast.success('Задача успешно обновлена')
+          toast.success(t('taskForm.updateOk'))
         } else {
           await api.createTask(payload)
-          toast.success('Задача успешно создана')
+          toast.success(t('taskForm.createOk'))
         }
         router.push('/tasks')
       } catch (error) {
-        toast.error(isEditing.value ? 'Ошибка обновления задачи' : 'Ошибка создания задачи')
+        toast.error(isEditing.value ? t('taskForm.saveError') : t('taskForm.createError'))
         console.error('Error saving task:', error)
       } finally {
         loading.value = false
@@ -377,7 +379,7 @@ export default {
         const { data } = await api.toggleTaskFavorite(route.params.id)
         isFavorited.value = data.is_favorited
       } catch (error) {
-        toast.error('Не удалось обновить избранное')
+        toast.error(t('taskForm.favoriteError'))
         console.error('toggleFavorite', error)
       } finally {
         favoriteLoading.value = false

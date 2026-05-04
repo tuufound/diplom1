@@ -5,12 +5,12 @@
       <div>
         <h2 class="page-title">
           <i class="fas fa-user-circle"></i>
-          Профиль
+          {{ $t('profile.title') }}
         </h2>
-        <p class="section-subtitle">Управляй своим аккаунтом и настройками</p>
+        <p class="section-subtitle">{{ $t('profile.subtitle') }}</p>
       </div>
       <button class="btn btn-outline-danger" @click="logout">
-        <i class="fas fa-sign-out-alt me-2"></i> Выйти
+        <i class="fas fa-sign-out-alt me-2"></i> {{ $t('profile.logout') }}
       </button>
     </div>
 
@@ -22,7 +22,7 @@
           <div class="card-body text-center">
             <div class="profile-avatar mb-3">
               <span v-if="profilePhoto" class="avatar-photo-wrap">
-                <img :src="profilePhoto" alt="Фото профиля" class="avatar-photo">
+                <img :src="profilePhoto" :alt="$t('profile.photoAlt')" class="avatar-photo">
               </span>
               <span v-else class="avatar-placeholder">
                 <i class="fas fa-user"></i>
@@ -38,7 +38,7 @@
                 @change="onAvatarSelected"
               >
               <button class="btn btn-sm btn-outline-secondary" @click="triggerAvatarSelect">
-                <i class="fas fa-image me-1"></i> Сменить
+                <i class="fas fa-image me-1"></i> {{ $t('profile.changePhoto') }}
               </button>
               <button v-if="profilePhoto" class="btn btn-sm btn-outline-danger" @click="removeAvatar">
                 <i class="fas fa-trash me-1"></i>
@@ -50,7 +50,7 @@
 
             <div v-if="!isEditingProfile" class="d-flex justify-content-center gap-2">
               <button class="btn btn-primary" @click="startEditing">
-                <i class="fas fa-edit me-2"></i> Редактировать
+                <i class="fas fa-edit me-2"></i> {{ $t('profile.edit') }}
               </button>
             </div>
           </div>
@@ -60,7 +60,7 @@
         <div class="card stats-card mt-4">
           <div class="card-header">
             <h5 class="mb-0">
-              <i class="fas fa-chart-line me-2"></i>Статистика
+              <i class="fas fa-chart-line me-2"></i>{{ $t('profile.stats') }}
             </h5>
           </div>
           <div class="card-body">
@@ -70,7 +70,7 @@
               </div>
               <div class="stat-info">
                 <span class="stat-value">{{ stats.totalTasks }}</span>
-                <span class="stat-label">Всего задач</span>
+                <span class="stat-label">{{ $t('profile.totalTasks') }}</span>
               </div>
             </div>
 
@@ -80,7 +80,7 @@
               </div>
               <div class="stat-info">
                 <span class="stat-value">{{ stats.completedTasks }}</span>
-                <span class="stat-label">Выполнено</span>
+                <span class="stat-label">{{ $t('profile.completed') }}</span>
               </div>
             </div>
 
@@ -90,7 +90,7 @@
               </div>
               <div class="stat-info">
                 <span class="stat-value">{{ stats.inProgressTasks }}</span>
-                <span class="stat-label">В процессе</span>
+                <span class="stat-label">{{ $t('profile.inProgress') }}</span>
               </div>
             </div>
 
@@ -100,7 +100,7 @@
               </div>
               <div class="stat-info">
                 <span class="stat-value">{{ stats.totalTime }}</span>
-                <span class="stat-label">Общее время</span>
+                <span class="stat-label">{{ $t('profile.totalTime') }}</span>
               </div>
             </div>
           </div>
@@ -113,13 +113,13 @@
         <div class="card activity-card">
           <div class="card-header">
             <h5 class="mb-0">
-              <i class="fas fa-history me-2"></i>Недавняя активность
+              <i class="fas fa-history me-2"></i>{{ $t('profile.activity') }}
             </h5>
           </div>
           <div class="card-body">
             <div v-if="recentActivity.length === 0" class="empty-state">
               <i class="fas fa-inbox"></i>
-              <p>Нет недавней активности</p>
+              <p>{{ $t('profile.noActivity') }}</p>
             </div>
             <div v-else class="activity-list">
               <div v-for="(activity, index) in recentActivity" :key="index" class="activity-item">
@@ -146,29 +146,29 @@
           <div class="card-header">
             <h5 class="mb-0">
               <i class="fas fa-cog me-2"></i>
-              {{ isEditingProfile ? 'Редактирование профиля' : 'Настройки' }}
+              {{ isEditingProfile ? $t('profile.editingProfile') : $t('profile.settings') }}
             </h5>
           </div>
           <div class="card-body">
             <template v-if="isEditingProfile">
               <div class="mb-4">
-                <label for="profileUsername" class="form-label">Имя пользователя</label>
+                <label for="profileUsername" class="form-label">{{ $t('profile.username') }}</label>
                 <input
                   id="profileUsername"
                   class="form-control"
                   v-model.trim="profileForm.username"
                   maxlength="150"
-                  placeholder="Введите имя пользователя"
+                  :placeholder="$t('profile.usernamePh')"
                 >
               </div>
               <div class="d-flex gap-3">
                 <button class="btn btn-primary" :disabled="savingProfile" @click="saveProfile">
                   <span v-if="savingProfile" class="spinner-border spinner-border-sm me-2"></span>
                   <i v-else class="fas fa-check me-2"></i>
-                  Сохранить
+                  {{ $t('common.save') }}
                 </button>
                 <button class="btn btn-outline-secondary" :disabled="savingProfile" @click="cancelEditing">
-                  <i class="fas fa-times me-2"></i> Отмена
+                  <i class="fas fa-times me-2"></i> {{ $t('common.cancel') }}
                 </button>
               </div>
             </template>
@@ -177,8 +177,8 @@
                 <div class="setting-info">
                   <i class="fas fa-moon setting-icon"></i>
                   <div>
-                    <label for="theme" class="setting-label mb-0">Тёмный режим</label>
-                    <p class="setting-desc mb-0">Переключить на тёмную тему</p>
+                    <label for="theme" class="setting-label mb-0">{{ $t('profile.darkMode') }}</label>
+                    <p class="setting-desc mb-0">{{ $t('profile.darkModeDesc') }}</p>
                   </div>
                 </div>
                 <div class="form-check form-switch">
@@ -191,8 +191,8 @@
                 <div class="setting-info">
                   <i class="fas fa-bell setting-icon"></i>
                   <div>
-                    <label for="notifications" class="setting-label mb-0">Уведомления</label>
-                    <p class="setting-desc mb-0">Получать уведомления о задачах</p>
+                    <label for="notifications" class="setting-label mb-0">{{ $t('profile.notifications') }}</label>
+                    <p class="setting-desc mb-0">{{ $t('profile.notificationsDesc') }}</p>
                   </div>
                 </div>
                 <div class="form-check form-switch">
@@ -205,13 +205,13 @@
                 <div class="setting-info">
                   <i class="fas fa-language setting-icon"></i>
                   <div>
-                    <label for="language" class="setting-label mb-0">Язык интерфейса</label>
-                    <p class="setting-desc mb-0">Выберите язык приложения</p>
+                    <label for="language" class="setting-label mb-0">{{ $t('profile.language') }}</label>
+                    <p class="setting-desc mb-0">{{ $t('profile.languageDesc') }}</p>
                   </div>
                 </div>
-                <select class="form-select setting-select" id="language" v-model="language">
-                  <option value="ru">Русский</option>
-                  <option value="en">English</option>
+                <select class="form-select setting-select" id="language" v-model="locale">
+                  <option value="ru">{{ $t('profile.langRu') }}</option>
+                  <option value="en">{{ $t('profile.langEn') }}</option>
                 </select>
               </div>
             </template>
@@ -525,18 +525,21 @@
 </style>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { format, parseISO } from 'date-fns'
-import { ru } from 'date-fns/locale'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
+import { useAppDateLocale } from '@/composables/useAppDateLocale'
 import api from '@/utils/api'
 
 export default {
   name: 'ProfilePage',
   setup() {
+    const { t, locale } = useI18n()
+    const dateLocale = useAppDateLocale()
     const authStore = useAuthStore()
     const themeStore = useThemeStore()
     const router = useRouter()
@@ -548,13 +551,12 @@ export default {
       totalTasks: 0,
       completedTasks: 0,
       inProgressTasks: 0,
-      totalTime: '0м'
+      totalTime: t('common.zeroMin')
     })
 
     const recentActivity = ref([])
 
     const notificationsEnabled = ref(true)
-    const language = ref('ru')
     const isEditingProfile = ref(false)
     const savingProfile = ref(false)
     const avatarInput = ref(null)
@@ -574,14 +576,9 @@ export default {
     })
 
     const getActivityTypeText = (type) => {
-      const typeMap = {
-        'task_created': 'Создание',
-        'task_updated': 'Обновление',
-        'task_completed': 'Завершение',
-        'time_started': 'Таймер',
-        'time_stopped': 'Остановка'
-      }
-      return typeMap[type] || type
+      const key = `activityType.${type}`
+      const translated = t(key)
+      return translated !== key ? translated : type
     }
 
     const getActivityIcon = (type) => {
@@ -619,7 +616,7 @@ export default {
 
     const formatDate = (dateString) => {
       if (!dateString) return ''
-      return format(parseISO(dateString), 'dd MMM yyyy, HH:mm', { locale: ru })
+      return format(parseISO(dateString), 'dd MMM yyyy, HH:mm', { locale: dateLocale.value })
     }
 
     const logout = () => {
@@ -644,7 +641,7 @@ export default {
     const saveProfile = async () => {
       const username = profileForm.value.username.trim()
       if (!username) {
-        toast.error('Имя пользователя не может быть пустым')
+        toast.error(t('profile.usernameEmpty'))
         return
       }
       try {
@@ -652,9 +649,9 @@ export default {
         await api.updateCurrentUser({ username })
         await authStore.checkAuth()
         isEditingProfile.value = false
-        toast.success('Профиль обновлен')
+        toast.success(t('profile.profileUpdated'))
       } catch (error) {
-        toast.error(error.response?.data?.detail || 'Ошибка обновления профиля')
+        toast.error(error.response?.data?.detail || t('profile.profileUpdateError'))
       } finally {
         savingProfile.value = false
       }
@@ -672,18 +669,18 @@ export default {
       const file = event.target.files?.[0]
       if (!file) return
       if (!file.type.startsWith('image/')) {
-        toast.error('Выберите файл изображения')
+        toast.error(t('profile.imageOnly'))
         return
       }
       if (file.size > 2 * 1024 * 1024) {
-        toast.error('Максимальный размер изображения: 2MB')
+        toast.error(t('profile.imageMax'))
         return
       }
       const reader = new FileReader()
       reader.onload = () => {
         profilePhoto.value = String(reader.result || '')
         localStorage.setItem(avatarStorageKey.value, profilePhoto.value)
-        toast.success('Фото профиля обновлено')
+        toast.success(t('profile.photoUpdated'))
       }
       reader.readAsDataURL(file)
       event.target.value = ''
@@ -692,7 +689,7 @@ export default {
     const removeAvatar = () => {
       profilePhoto.value = ''
       localStorage.removeItem(avatarStorageKey.value)
-      toast.success('Фото профиля удалено')
+      toast.success(t('profile.photoRemoved'))
     }
 
     const parseDurationToSeconds = (durationString) => {
@@ -705,8 +702,14 @@ export default {
     const formatTotalTime = (seconds) => {
       const hours = Math.floor(seconds / 3600)
       const minutes = Math.floor((seconds % 3600) / 60)
-      if (hours > 0) return `${hours}ч ${minutes}м`
-      return `${minutes}м`
+      if (hours > 0) return t('profile.timeHm', { h: hours, m: minutes })
+      return t('profile.timeM', { m: minutes })
+    }
+
+    const getStatusText = (status) => {
+      const key = `taskStatus.${status}`
+      const translated = t(key)
+      return translated !== key ? translated : status
     }
 
     const loadProfileData = async () => {
@@ -727,8 +730,8 @@ export default {
         }
 
         const taskActivity = tasks.slice(0, 5).map(task => ({
-          title: `Задача "${task.title}"`,
-          description: `Статус: ${getStatusText(task.status)}`,
+          title: t('profile.activityTaskTitle', { title: task.title }),
+          description: t('profile.activityTaskStatus', { status: getStatusText(task.status) }),
           date: task.updated_at || task.created_at,
           type: task.status === 'done' ? 'task_completed' : 'task_updated'
         }))
@@ -739,15 +742,9 @@ export default {
       }
     }
 
-    const getStatusText = (status) => {
-      const map = {
-        todo: 'К выполнению',
-        in_progress: 'В процессе',
-        done: 'Выполнено',
-        archived: 'В архиве'
-      }
-      return map[status] || status
-    }
+    watch(locale, () => {
+      loadProfileData()
+    })
 
     onMounted(() => {
       loadProfileData()
@@ -761,7 +758,7 @@ export default {
       recentActivity,
       darkMode,
       notificationsEnabled,
-      language,
+      locale,
       isEditingProfile,
       savingProfile,
       avatarInput,

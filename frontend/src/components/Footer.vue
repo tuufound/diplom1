@@ -7,7 +7,7 @@
           TaskFlow
         </span>
         <span class="footer-copyright">
-          {{ currentYear }} — Планируй задачи стильно
+          {{ currentYear }} — {{ $t('footer.tagline') }}
         </span>
       </div>
 
@@ -24,7 +24,7 @@
       </div>
 
       <div class="footer-right">
-        <div class="theme-toggle" @click="toggleTheme" :title="isDark ? 'Светлая тема' : 'Тёмная тема'">
+        <div class="theme-toggle" @click="toggleTheme" :title="isDark ? $t('footer.themeLight') : $t('footer.themeDark')">
           <i class="fas" :class="isDark ? 'fa-sun' : 'fa-moon'"></i>
         </div>
       </div>

@@ -3,14 +3,14 @@
     <div class="page-content-surface">
       <div class="time-head">
         <div>
-          <h2 class="page-title"><i class="fas fa-clock me-2"></i>Время</h2>
-          <p class="section-subtitle">Быстрый старт таймера, чистая история, простой Pomodoro.</p>
+          <h2 class="page-title"><i class="fas fa-clock me-2"></i>{{ $t('time.title') }}</h2>
+          <p class="section-subtitle">{{ $t('time.subtitle') }}</p>
         </div>
       </div>
 
       <div class="time-grid">
       <section class="card">
-        <div class="card-header"><h5 class="mb-0">Активный таймер</h5></div>
+        <div class="card-header"><h5 class="mb-0">{{ $t('time.activeCard') }}</h5></div>
         <div class="card-body">
           <div v-if="activeTimeEntry" class="active-timer">
             <div class="active-top">
@@ -19,7 +19,7 @@
                 <div class="task-meta">{{ formatDate(activeTimeEntry.start_time) }}</div>
               </div>
               <button class="btn btn-danger" @click="stopTimer">
-                <i class="fas fa-stop me-1"></i> Стоп
+                <i class="fas fa-stop me-1"></i> {{ $t('time.stop') }}
               </button>
             </div>
             <div v-if="activeTimeEntry.description" class="active-desc">{{ activeTimeEntry.description }}</div>
@@ -28,10 +28,10 @@
             </div>
             <div v-if="activeCountdownLabel" class="countdown-banner mt-2">
               <i class="fas fa-bell me-2"></i>
-              До сигнала: <strong>{{ activeCountdownLabel }}</strong>
+              {{ $t('time.countdownUntil') }} <strong>{{ activeCountdownLabel }}</strong>
             </div>
             <div class="limit-panel mt-3">
-              <div class="form-label small text-muted mb-1">Лимит и сигнал</div>
+              <div class="form-label small text-muted mb-1">{{ $t('time.limitLabel') }}</div>
               <div class="d-flex flex-wrap gap-2 align-items-center">
                 <input
                   v-model.number="limitMinutes"
@@ -39,58 +39,58 @@
                   class="form-control form-control-sm limit-input"
                   min="0"
                   max="720"
-                  title="Минуты до сигнала"
+                  :title="$t('time.minutesTitle')"
                 >
-                <button type="button" class="btn btn-sm btn-primary" @click="applyActiveLimit">Задать</button>
+                <button type="button" class="btn btn-sm btn-primary" @click="applyActiveLimit">{{ $t('time.setLimit') }}</button>
                 <button
                   v-if="hasActiveLimit"
                   type="button"
                   class="btn btn-sm btn-outline-secondary"
                   @click="clearActiveLimit"
                 >
-                  Сбросить лимит
+                  {{ $t('time.clearLimit') }}
                 </button>
               </div>
               <div class="form-check form-check-inline mt-2 me-3">
                 <input id="lim-sound" v-model="limitSound" class="form-check-input" type="checkbox">
-                <label class="form-check-label small" for="lim-sound">Звук</label>
+                <label class="form-check-label small" for="lim-sound">{{ $t('time.sound') }}</label>
               </div>
               <div class="form-check form-check-inline mt-2">
                 <input id="lim-autostop" v-model="limitAutoStop" class="form-check-input" type="checkbox">
-                <label class="form-check-label small" for="lim-autostop">Стоп учёта в конце</label>
+                <label class="form-check-label small" for="lim-autostop">{{ $t('time.autoStopEnd') }}</label>
               </div>
               <button type="button" class="btn btn-link btn-sm p-0 mt-1" @click="playTimerPreview">
-                Проверить звук
+                {{ $t('time.testSound') }}
               </button>
             </div>
           </div>
           <div v-else class="no-active">
             <i class="fas fa-clock"></i>
             <div class="no-text">
-              <div class="no-title">Нет активного таймера</div>
-              <div class="no-sub">Запусти таймер из списка задач.</div>
+              <div class="no-title">{{ $t('time.noActiveTitle') }}</div>
+              <div class="no-sub">{{ $t('time.noActiveSub') }}</div>
             </div>
           </div>
         </div>
       </section>
 
       <section class="card">
-        <div class="card-header"><h5 class="mb-0">История</h5></div>
+        <div class="card-header"><h5 class="mb-0">{{ $t('time.history') }}</h5></div>
         <div class="card-body">
           <div v-if="loading" class="loading-state">
             <div class="spinner-border" role="status"></div>
           </div>
           <div v-else-if="timeEntries.length === 0" class="empty-state">
             <i class="fas fa-history"></i>
-            <p>История пуста</p>
-            <router-link to="/tasks" class="btn btn-outline-secondary btn-sm mt-2">Открыть задачи</router-link>
+            <p>{{ $t('time.historyEmpty') }}</p>
+            <router-link to="/tasks" class="btn btn-outline-secondary btn-sm mt-2">{{ $t('time.openTasks') }}</router-link>
           </div>
           <div v-else class="entry-list">
             <article v-for="entry in timeEntries" :key="entry.id" class="entry-row">
               <div class="entry-main">
                 <div class="entry-title">{{ entry.task.title }}</div>
                 <div class="entry-sub">
-                  {{ formatDateTime(entry.start_time) }} → {{ entry.end_time ? formatDateTime(entry.end_time) : 'Активно' }}
+                  {{ formatDateTime(entry.start_time) }} → {{ entry.end_time ? formatDateTime(entry.end_time) : $t('time.active') }}
                   · <strong>{{ formatDuration(entry.duration) }}</strong>
                 </div>
                 <div v-if="entry.description" class="entry-desc">{{ truncateText(entry.description, 80) }}</div>
@@ -101,15 +101,15 @@
       </section>
 
       <section class="card">
-        <div class="card-header"><h5 class="mb-0">Pomodoro</h5></div>
+        <div class="card-header"><h5 class="mb-0">{{ $t('time.pomodoro') }}</h5></div>
         <div class="card-body">
           <div class="pomodoro">
             <div class="pomodoro-time">{{ pomodoroDisplay }}</div>
-            <div class="pomodoro-sub">{{ pomodoroWorkMode ? 'Фокус 25 минут' : 'Перерыв 5 минут' }}</div>
+            <div class="pomodoro-sub">{{ pomodoroWorkMode ? $t('time.pomodoroFocus') : $t('time.pomodoroBreak') }}</div>
             <div class="pomodoro-actions">
-              <button class="btn btn-outline-success" @click="startPomodoro" :disabled="pomodoroRunning">Старт</button>
-              <button class="btn btn-outline-warning" @click="pausePomodoro" :disabled="!pomodoroRunning">Пауза</button>
-              <button class="btn btn-outline-secondary" @click="resetPomodoro">Сброс</button>
+              <button class="btn btn-outline-success" @click="startPomodoro" :disabled="pomodoroRunning">{{ $t('time.start') }}</button>
+              <button class="btn btn-outline-warning" @click="pausePomodoro" :disabled="!pomodoroRunning">{{ $t('time.pause') }}</button>
+              <button class="btn btn-outline-secondary" @click="resetPomodoro">{{ $t('time.reset') }}</button>
             </div>
           </div>
         </div>
@@ -123,16 +123,19 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/utils/api'
 import { useToast } from 'vue-toastification'
 import { useTaskTimerCountdown } from '@/composables/useTaskTimerCountdown'
+import { useAppDateLocale } from '@/composables/useAppDateLocale'
 import { playTimerExpirySound } from '@/utils/timerAlertSound'
 import { format, parseISO } from 'date-fns'
-import { ru } from 'date-fns/locale'
 
 export default {
   name: 'TimeTrackingPage',
   setup() {
+    const { t } = useI18n()
+    const dateLocale = useAppDateLocale()
     const toast = useToast()
 
     const timeEntries = ref([])
@@ -161,7 +164,7 @@ export default {
         const response = await api.getTimeEntries()
         timeEntries.value = response.data
       } catch (error) {
-        toast.error('Ошибка загрузки истории времени')
+        toast.error(t('time.loadHistoryError'))
         console.error('Error fetching time entries:', error)
       } finally {
         loading.value = false
@@ -178,7 +181,7 @@ export default {
     } = useTaskTimerCountdown(timeEntries, {
       stopEntry: async (entryId) => {
         await api.stopTimeEntry(entryId)
-        toast.success('Таймер остановлен по лимиту')
+        toast.success(t('time.timerStoppedLimit'))
         await fetchTimeEntries()
       }
     })
@@ -192,7 +195,7 @@ export default {
         const response = await api.getTasks()
         tasks.value = response.data.filter(task => task.is_active)
       } catch (error) {
-        toast.error('Ошибка загрузки задач')
+        toast.error(t('time.loadTasksError'))
         console.error('Error fetching tasks:', error)
       }
     }
@@ -206,10 +209,10 @@ export default {
           clearStoredCountdown()
         }
         await api.stopTimeEntry(activeTimeEntry.value.id)
-        toast.success('Таймер остановлен')
+        toast.success(t('time.timerStopped'))
         await fetchTimeEntries()
       } catch (error) {
-        toast.error('Ошибка остановки таймера')
+        toast.error(t('time.timerStopError'))
         console.error('Error stopping timer:', error)
       }
     }
@@ -236,16 +239,16 @@ export default {
       if (!entry) return
       const m = Number(limitMinutes.value)
       if (!Number.isFinite(m) || m < 0) {
-        toast.error('Укажите неотрицательное число минут')
+        toast.error(t('time.minutesNonNegative'))
         return
       }
       scheduleCountdown(entry.id, m, limitSound.value, limitAutoStop.value)
-      if (m > 0) toast.info('Лимит установлен')
+      if (m > 0) toast.info(t('time.limitSet'))
     }
 
     const clearActiveLimit = () => {
       clearStoredCountdown()
-      toast.info('Лимит снят')
+      toast.info(t('time.limitCleared'))
     }
 
     const playTimerPreview = () => {
@@ -254,31 +257,31 @@ export default {
 
     const formatDate = (dateString) => {
       if (!dateString) return ''
-      return format(parseISO(dateString), 'dd MMM yyyy', { locale: ru })
+      return format(parseISO(dateString), 'dd MMM yyyy', { locale: dateLocale.value })
     }
 
     const formatDateTime = (dateString) => {
       if (!dateString) return ''
-      return format(parseISO(dateString), 'dd MMM yyyy, HH:mm', { locale: ru })
+      return format(parseISO(dateString), 'dd MMM yyyy, HH:mm', { locale: dateLocale.value })
     }
 
     const formatDuration = (durationString) => {
-      if (!durationString) return 'Активно'
+      if (!durationString) return t('time.active')
 
       // Parse duration string (assuming format like "HH:MM:SS")
       const parts = durationString.split(':')
       if (parts.length === 3) {
-        const hours = parseInt(parts[0])
-        const minutes = parseInt(parts[1])
-        const seconds = parseInt(parts[2])
+        const hours = parseInt(parts[0], 10)
+        const minutes = parseInt(parts[1], 10)
+        const seconds = parseInt(parts[2], 10)
 
         if (hours > 0) {
-          return `${hours}ч ${minutes}м`
-        } else if (minutes > 0) {
-          return `${minutes}м ${seconds}с`
-        } else {
-          return `${seconds}с`
+          return t('time.durHM', { h: hours, m: minutes })
         }
+        if (minutes > 0) {
+          return t('time.durMS', { m: minutes, s: seconds })
+        }
+        return t('time.durS', { s: seconds })
       }
 
       return durationString
@@ -312,7 +315,7 @@ export default {
         playTimerExpirySound()
         pomodoroWorkMode.value = !pomodoroWorkMode.value
         pomodoroSeconds.value = pomodoroWorkMode.value ? 25 * 60 : 5 * 60
-        toast.info(pomodoroWorkMode.value ? 'Новая фокус-сессия' : 'Время перерыва')
+        toast.info(pomodoroWorkMode.value ? t('time.pomodoroNewFocus') : t('time.pomodoroBreakTime'))
         return
       }
       pomodoroSeconds.value -= 1

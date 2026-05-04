@@ -13,7 +13,8 @@
 </template>
 
 <script>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import Navbar from '@/components/Navbar.vue'
@@ -28,10 +29,15 @@ export default {
   setup() {
     const authStore = useAuthStore()
     const themeStore = useThemeStore()
+    const { locale } = useI18n()
     const isAuthenticated = computed(() => authStore.isAuthenticated)
 
     onMounted(() => {
       themeStore.applyTheme(themeStore.isDark)
+    })
+
+    watch(locale, (v) => {
+      localStorage.setItem('locale', v)
     })
 
     return {

@@ -3,12 +3,12 @@
     <div class="page-content-surface">
     <div class="page-head">
       <div>
-        <h2 class="page-title"><i class="fas fa-chart-pie me-2"></i>Отчеты</h2>
-        <p class="section-subtitle">Простой обзор: что сделано, где узкие места и куда уходит время.</p>
+        <h2 class="page-title"><i class="fas fa-chart-pie me-2"></i>{{ $t('reports.title') }}</h2>
+        <p class="section-subtitle">{{ $t('reports.subtitle') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn btn-outline-success" @click="exportCsv"><i class="fas fa-file-csv me-1"></i>CSV</button>
-        <button class="btn btn-outline-danger" @click="exportPdf"><i class="fas fa-file-pdf me-1"></i>PDF</button>
+        <button class="btn btn-outline-success" @click="exportCsv"><i class="fas fa-file-csv me-1"></i>{{ $t('reports.csv') }}</button>
+        <button class="btn btn-outline-danger" @click="exportPdf"><i class="fas fa-file-pdf me-1"></i>{{ $t('reports.pdf') }}</button>
       </div>
     </div>
 
@@ -21,14 +21,14 @@
         </div>
         <div v-if="dateRange === 'custom'" class="custom-range">
           <div>
-            <label class="form-label">Начало</label>
+            <label class="form-label">{{ $t('reports.start') }}</label>
             <input v-model="startDate" type="date" class="form-control">
           </div>
           <div>
-            <label class="form-label">Конец</label>
+            <label class="form-label">{{ $t('reports.end') }}</label>
             <input v-model="endDate" type="date" class="form-control">
           </div>
-          <button class="btn btn-primary align-self-end" @click="applyFilters">Применить</button>
+          <button class="btn btn-primary align-self-end" @click="applyFilters">{{ $t('reports.apply') }}</button>
         </div>
       </div>
     </section>
@@ -42,26 +42,26 @@
 
     <section class="metrics-grid mb-4">
       <article class="metric-card">
-        <span>Всего задач</span>
+        <span>{{ $t('reports.totalTasks') }}</span>
         <strong>{{ report.total_tasks || 0 }}</strong>
       </article>
       <article class="metric-card">
-        <span>Закрыто</span>
+        <span>{{ $t('reports.closed') }}</span>
         <strong>{{ report.completed_tasks || 0 }}</strong>
       </article>
       <article class="metric-card">
-        <span>Потрачено времени</span>
+        <span>{{ $t('reports.timeSpent') }}</span>
         <strong>{{ formatSeconds(report.total_tracked_seconds || 0) }}</strong>
       </article>
       <article class="metric-card">
-        <span>Среднее время</span>
+        <span>{{ $t('reports.avgTime') }}</span>
         <strong>{{ avgCompletionLabel }}</strong>
       </article>
     </section>
 
     <section class="content-grid mb-4">
       <div class="card report-card">
-        <div class="card-header"><h5 class="mb-0">Статусы задач</h5></div>
+        <div class="card-header"><h5 class="mb-0">{{ $t('reports.statusTitle') }}</h5></div>
         <div class="card-body">
           <div class="status-list">
             <article v-for="item in statusSummary" :key="item.key" class="status-row">
@@ -78,9 +78,9 @@
       </div>
 
       <div class="card report-card">
-        <div class="card-header"><h5 class="mb-0">Топ задач по времени</h5></div>
+        <div class="card-header"><h5 class="mb-0">{{ $t('reports.topTasks') }}</h5></div>
         <div class="card-body">
-          <div v-if="topTimeTasks.length === 0" class="empty-state">Нет данных по времени за период</div>
+          <div v-if="topTimeTasks.length === 0" class="empty-state">{{ $t('reports.noTimeData') }}</div>
           <div v-else class="top-list">
             <article v-for="item in topTimeTasks" :key="item.task_id" class="top-row">
               <div class="top-title">{{ item.task_title }}</div>
@@ -92,9 +92,9 @@
     </section>
 
     <section class="card report-card">
-      <div class="card-header"><h5 class="mb-0">Задачи за период</h5></div>
+      <div class="card-header"><h5 class="mb-0">{{ $t('reports.tasksPeriod') }}</h5></div>
       <div class="card-body">
-        <div v-if="filteredTasks.length === 0" class="empty-state">Нет задач для выбранного периода</div>
+        <div v-if="filteredTasks.length === 0" class="empty-state">{{ $t('reports.noTasksPeriod') }}</div>
         <div v-else class="task-grid">
           <article v-for="task in filteredTasks" :key="task.id" class="task-card">
             <div class="task-head">
@@ -119,6 +119,7 @@
 
 <script>
 import { ref, onMounted, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/utils/api'
 import { useToast } from 'vue-toastification'
 import { format, subDays, subMonths, subQuarters, subYears, parseISO, startOfDay } from 'date-fns'
@@ -128,6 +129,7 @@ import autoTable from 'jspdf-autotable'
 export default {
   name: 'ReportPage',
   setup() {
+    const { t, locale } = useI18n()
     const toast = useToast()
     const tasks = ref([])
     const timeEntries = ref([])
@@ -137,14 +139,17 @@ export default {
     const startDate = ref('')
     const endDate = ref('')
 
-    const periodOptions = [
-      { value: 'day', label: 'День' },
-      { value: 'week', label: 'Неделя' },
-      { value: 'month', label: 'Месяц' },
-      { value: 'quarter', label: 'Квартал' },
-      { value: 'year', label: 'Год' },
-      { value: 'custom', label: 'Произвольный' }
+    const periodOptions = computed(() => {
+      void locale.value
+      return [
+      { value: 'day', label: t('reports.periodDay') },
+      { value: 'week', label: t('reports.periodWeek') },
+      { value: 'month', label: t('reports.periodMonth') },
+      { value: 'quarter', label: t('reports.periodQuarter') },
+      { value: 'year', label: t('reports.periodYear') },
+      { value: 'custom', label: t('reports.periodCustom') }
     ]
+    })
 
     const fetchData = async () => {
       try {
@@ -161,7 +166,7 @@ export default {
         timeEntries.value = timeEntriesResponse.data
         report.value = reportResponse.data
       } catch (error) {
-        toast.error('Ошибка загрузки данных отчетов')
+        toast.error(t('reports.loadError'))
       } finally {
         loading.value = false
       }
@@ -180,16 +185,17 @@ export default {
     const topTimeTasks = computed(() => (report.value?.top_time_tasks || []).slice(0, 6))
 
     const statusSummary = computed(() => {
+      void locale.value
       const counts = { todo: 0, in_progress: 0, done: 0, archived: 0 }
       filteredTasks.value.forEach(task => {
         if (counts[task.status] !== undefined) counts[task.status] += 1
       })
       const total = filteredTasks.value.length || 1
       return [
-        { key: 'todo', label: 'К выполнению' },
-        { key: 'in_progress', label: 'В процессе' },
-        { key: 'done', label: 'Выполнено' },
-        { key: 'archived', label: 'В архиве' }
+        { key: 'todo', label: t('taskStatus.todo') },
+        { key: 'in_progress', label: t('taskStatus.in_progress') },
+        { key: 'done', label: t('taskStatus.done') },
+        { key: 'archived', label: t('taskStatus.archived') }
       ].map(item => ({
         ...item,
         count: counts[item.key],
@@ -198,20 +204,16 @@ export default {
     })
 
     const avgCompletionLabel = computed(() => {
+      void locale.value
       const v = report.value?.avg_completion_seconds
-      if (v == null) return 'Нет данных'
+      if (v == null) return t('common.noData')
       return formatSeconds(v)
     })
 
-    const getStatusText = (status) => {
-      const map = {
-        todo: 'К выполнению',
-        in_progress: 'В процессе',
-        done: 'Выполнено',
-        archived: 'В архиве'
-      }
-      return map[status] || status
-    }
+    const getStatusText = (status) =>
+      ['todo', 'in_progress', 'done', 'archived'].includes(status)
+        ? t(`taskStatus.${status}`)
+        : status
 
     const statusPillClass = (status) => `pill-${status || 'todo'}`
     const statusBarClass = (status) => `fill-${status || 'todo'}`
@@ -235,10 +237,10 @@ export default {
       const safeSeconds = Math.max(0, Number(seconds) || 0)
       const h = Math.floor(safeSeconds / 3600)
       const m = Math.floor((safeSeconds % 3600) / 60)
-      if (h > 0) return `${h}ч ${m}м`
-      if (m > 0) return `${m}м`
-      if (safeSeconds > 0) return `${safeSeconds} с`
-      return '0м'
+      if (h > 0) return t('reports.fmtHm', { h, m })
+      if (m > 0) return t('reports.fmtM', { m })
+      if (safeSeconds > 0) return t('reports.fmtS', { s: safeSeconds })
+      return t('common.zeroMin')
     }
 
     const setDateRange = () => {
@@ -282,7 +284,13 @@ export default {
     ]))
 
     const exportCsv = () => {
-      const header = ['Задача', 'Статус', 'Приоритет', 'Категория', 'Время']
+      const header = [
+        t('reports.exportTask'),
+        t('reports.exportStatus'),
+        t('reports.exportPriority'),
+        t('reports.exportCategory'),
+        t('reports.exportTime')
+      ]
       const csv = [header, ...getRowsForExport()]
         .map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(','))
         .join('\n')
@@ -298,10 +306,18 @@ export default {
     const exportPdf = () => {
       const doc = new jsPDF()
       doc.setFontSize(14)
-      doc.text('Отчет по задачам', 14, 16)
+      doc.text(t('reports.pdfTitle'), 14, 16)
       autoTable(doc, {
         startY: 24,
-        head: [['Задача', 'Статус', 'Приоритет', 'Категория', 'Время']],
+        head: [
+          [
+            t('reports.exportTask'),
+            t('reports.exportStatus'),
+            t('reports.exportPriority'),
+            t('reports.exportCategory'),
+            t('reports.exportTime')
+          ]
+        ],
         body: getRowsForExport(),
         styles: { fontSize: 9 }
       })

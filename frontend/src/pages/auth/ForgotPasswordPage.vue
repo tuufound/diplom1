@@ -5,40 +5,40 @@
         <div class="brand">
           <span class="brand-icon"><i class="fas fa-key"></i></span>
           <div>
-            <h2 class="h4 mb-0">Сброс пароля</h2>
-            <p class="section-subtitle mb-0">Обнови пароль и вернись к работе</p>
+            <h2 class="h4 mb-0">{{ $t('auth.forgotPageTitle') }}</h2>
+            <p class="section-subtitle mb-0">{{ $t('auth.forgotPageSubtitle') }}</p>
           </div>
         </div>
       </div>
 
       <form @submit.prevent="handleSubmit">
         <div class="mb-3">
-          <label class="form-label" for="username">Имя пользователя</label>
+          <label class="form-label" for="username">{{ $t('auth.username') }}</label>
           <input id="username" v-model="form.username" class="form-control" required>
         </div>
 
         <div class="mb-3">
-          <label class="form-label" for="email">Email</label>
+          <label class="form-label" for="email">{{ $t('auth.email') }}</label>
           <input id="email" v-model="form.email" type="email" class="form-control" required>
         </div>
 
         <div class="mb-3">
-          <label class="form-label" for="password">Новый пароль</label>
+          <label class="form-label" for="password">{{ $t('auth.newPassword') }}</label>
           <input id="password" v-model="form.newPassword" type="password" class="form-control" required>
         </div>
 
         <div class="mb-3">
-          <label class="form-label" for="confirmPassword">Подтверждение пароля</label>
+          <label class="form-label" for="confirmPassword">{{ $t('auth.confirmPasswordLabel') }}</label>
           <input id="confirmPassword" v-model="form.confirmPassword" type="password" class="form-control" required>
         </div>
 
         <button class="btn btn-primary w-100" :disabled="loading" type="submit">
           <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
-          Обновить пароль
+          {{ $t('auth.updatePassword') }}
         </button>
 
         <div class="text-center mt-3">
-          <router-link to="/login" class="text-decoration-none">Вернуться ко входу</router-link>
+          <router-link to="/login" class="text-decoration-none">{{ $t('auth.backLogin') }}</router-link>
         </div>
       </form>
     </div>
@@ -47,6 +47,7 @@
 
 <script>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import api from '@/utils/api'
@@ -56,6 +57,7 @@ export default {
   setup() {
     const router = useRouter()
     const toast = useToast()
+    const { t } = useI18n()
     const loading = ref(false)
     const form = ref({
       username: '',
@@ -66,7 +68,7 @@ export default {
 
     const handleSubmit = async () => {
       if (form.value.newPassword !== form.value.confirmPassword) {
-        toast.error('Пароли не совпадают')
+        toast.error(t('auth.passwordsMismatch'))
         return
       }
 
@@ -77,10 +79,10 @@ export default {
           email: form.value.email,
           new_password: form.value.newPassword
         })
-        toast.success('Пароль обновлен, теперь можно войти')
+        toast.success(t('auth.passwordUpdated'))
         router.push('/login')
       } catch (error) {
-        toast.error(error.response?.data?.detail || 'Не удалось обновить пароль')
+        toast.error(error.response?.data?.detail || t('auth.passwordUpdateFailed'))
       } finally {
         loading.value = false
       }

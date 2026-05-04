@@ -27,7 +27,7 @@
             <div class="user-avatar">
               <i class="fas fa-user"></i>
             </div>
-            <span class="user-name">{{ user?.username || 'User' }}</span>
+            <span class="user-name">{{ user?.username || $t('common.user') }}</span>
           </div>
           <button class="btn-logout" @click="logout">
             <i class="fas fa-sign-out-alt"></i>
@@ -40,6 +40,7 @@
 
 <script>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 
@@ -48,17 +49,18 @@ export default {
   setup() {
     const authStore = useAuthStore()
     const router = useRouter()
+    const { t } = useI18n()
 
     const user = computed(() => authStore.user)
 
-    const navItems = [
-      { path: '/tasks', icon: 'fas fa-list-check', label: 'Задачи' },
-      { path: '/kanban', icon: 'fas fa-columns', label: 'Канбан' },
-      { path: '/projects', icon: 'fas fa-folder', label: 'Проекты' },
-      { path: '/time-tracking', icon: 'fas fa-clock', label: 'Таймер' },
-      { path: '/reports', icon: 'fas fa-chart-pie', label: 'Отчеты' },
-      { path: '/profile', icon: 'fas fa-user-circle', label: 'Профиль' }
-    ]
+    const navItems = computed(() => [
+      { path: '/tasks', icon: 'fas fa-list-check', label: t('nav.tasks') },
+      { path: '/kanban', icon: 'fas fa-columns', label: t('nav.kanban') },
+      { path: '/projects', icon: 'fas fa-folder', label: t('nav.projects') },
+      { path: '/time-tracking', icon: 'fas fa-clock', label: t('nav.timer') },
+      { path: '/reports', icon: 'fas fa-chart-pie', label: t('nav.reports') },
+      { path: '/profile', icon: 'fas fa-user-circle', label: t('nav.profile') }
+    ])
 
     const logout = () => {
       authStore.logout()

@@ -3,15 +3,15 @@
     <div class="page-content-surface">
       <div class="kanban-head">
         <div>
-          <h2 class="page-title"><i class="fas fa-table-columns me-2"></i>Канбан</h2>
-          <p class="section-subtitle">Перетаскивай задачи между статусами или сдвигай стрелками.</p>
+          <h2 class="page-title"><i class="fas fa-table-columns me-2"></i>{{ $t('kanban.title') }}</h2>
+          <p class="section-subtitle">{{ $t('kanban.subtitle') }}</p>
         </div>
         <div class="head-actions">
           <router-link to="/tasks" class="btn btn-outline-secondary">
-            <i class="fas fa-list-check me-1"></i> Список
+            <i class="fas fa-list-check me-1"></i> {{ $t('kanban.list') }}
           </router-link>
           <router-link to="/tasks/create" class="btn btn-primary">
-            <i class="fas fa-plus me-1"></i> Новая
+            <i class="fas fa-plus me-1"></i> {{ $t('kanban.new') }}
           </router-link>
         </div>
       </div>
@@ -19,9 +19,9 @@
       <div class="kanban-toolbar card mb-3">
         <div class="card-body py-2 px-3">
           <div class="scope-filters">
-            <button type="button" class="filter-pill" :class="{ active: taskScope === 'all' }" @click="setTaskScope('all')">Все</button>
-            <button type="button" class="filter-pill" :class="{ active: taskScope === 'collaborative' }" @click="setTaskScope('collaborative')">Совместные</button>
-            <button type="button" class="filter-pill" :class="{ active: taskScope === 'favorites' }" @click="setTaskScope('favorites')"><i class="fas fa-star me-1"></i>Избранное</button>
+            <button type="button" class="filter-pill" :class="{ active: taskScope === 'all' }" @click="setTaskScope('all')">{{ $t('kanban.all') }}</button>
+            <button type="button" class="filter-pill" :class="{ active: taskScope === 'collaborative' }" @click="setTaskScope('collaborative')">{{ $t('kanban.collaborative') }}</button>
+            <button type="button" class="filter-pill" :class="{ active: taskScope === 'favorites' }" @click="setTaskScope('favorites')"><i class="fas fa-star me-1"></i>{{ $t('kanban.favorites') }}</button>
           </div>
         </div>
       </div>
@@ -29,7 +29,7 @@
       <div v-if="loading" class="empty-state card">
         <div class="card-body">
           <i class="fas fa-spinner fa-spin"></i>
-          <p>Загружаю задачи...</p>
+          <p>{{ $t('kanban.loadingText') }}</p>
         </div>
       </div>
 
@@ -50,7 +50,7 @@
           </header>
 
         <div v-if="tasksByStatus(column.status).length === 0" class="column-empty">
-          Перетащи задачу сюда
+          {{ $t('kanban.dropHint') }}
         </div>
 
         <article
@@ -64,14 +64,14 @@
         >
           <div class="task-title-row">
             <h6 class="task-title">{{ task.title }}</h6>
-            <span v-if="task.parent_task" class="badge subtask">Подзадача</span>
+            <span v-if="task.parent_task" class="badge subtask">{{ $t('kanban.subtask') }}</span>
           </div>
           <p v-if="task.description" class="task-desc">{{ truncateText(task.description, 120) }}</p>
 
           <div class="chips">
             <span class="chip" :class="getStatusChipClass(task.status)">{{ getStatusText(task.status) }}</span>
-            <span v-if="!task.project" class="chip chip-personal">Личная</span>
-            <span v-if="task.project" class="chip chip-collaborative">Совместная</span>
+            <span v-if="!task.project" class="chip chip-personal">{{ $t('tasksList.personal') }}</span>
+            <span v-if="task.project" class="chip chip-collaborative">{{ $t('tasksList.collaborativeChip') }}</span>
             <span v-if="task.project" class="chip" :class="getProjectChipClass(task.project?.id)">{{ task.project.name }}</span>
             <span v-if="task.category" class="chip" :class="getCategoryChipClass(task.category?.id)">
               <span class="me-1">{{ task.category.icon || '📁' }}</span>{{ task.category.name }}
@@ -85,17 +85,17 @@
               class="icon-btn star-btn"
               :class="{ active: task.is_favorited }"
               @click.stop="toggleFavorite(task)"
-              title="Избранное"
+              :title="$t('kanban.favorite')"
             >
               <i class="fas fa-star"></i>
             </button>
-            <button class="icon-btn" :disabled="!task.can_edit" @click="shiftStatus(task, -1)" title="Влево">
+            <button class="icon-btn" :disabled="!task.can_edit" @click="shiftStatus(task, -1)" :title="$t('kanban.left')">
               <i class="fas fa-arrow-left"></i>
             </button>
-            <button class="icon-btn" :disabled="!task.can_edit" @click="shiftStatus(task, 1)" title="Вправо">
+            <button class="icon-btn" :disabled="!task.can_edit" @click="shiftStatus(task, 1)" :title="$t('kanban.right')">
               <i class="fas fa-arrow-right"></i>
             </button>
-            <router-link class="icon-btn" :to="`/tasks/${task.id}/edit`" title="Редактировать">
+            <router-link class="icon-btn" :to="`/tasks/${task.id}/edit`" :title="$t('common.edit')">
               <i class="fas fa-pen"></i>
             </router-link>
           </div>
@@ -107,24 +107,26 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/utils/api'
 import { useToast } from 'vue-toastification'
 
 export default {
   name: 'TaskBoardPage',
   setup() {
+    const { t } = useI18n()
     const toast = useToast()
     const loading = ref(false)
     const tasks = ref([])
     const draggingTaskId = ref(null)
     const dropTargetStatus = ref(null)
-    const columns = [
-      { status: 'todo', title: 'К выполнению' },
-      { status: 'in_progress', title: 'В процессе' },
-      { status: 'done', title: 'Выполнено' },
-      { status: 'archived', title: 'Архив' }
-    ]
+    const columns = computed(() => [
+      { status: 'todo', title: t('kanban.colTodo') },
+      { status: 'in_progress', title: t('kanban.colProgress') },
+      { status: 'done', title: t('kanban.colDone') },
+      { status: 'archived', title: t('kanban.colArchive') }
+    ])
 
     const taskScope = ref('all')
 
@@ -137,7 +139,7 @@ export default {
         const response = await api.getTasks(params)
         tasks.value = response.data
       } catch (error) {
-        toast.error('Ошибка загрузки задач')
+        toast.error(t('kanban.loadError'))
         console.error('Error fetching tasks:', error)
       } finally {
         loading.value = false
@@ -164,14 +166,15 @@ export default {
         await api.updateTask(task.id, toUpdatePayload(task, nextStatus))
         task.status = nextStatus
       } catch (error) {
-        toast.error('Не удалось обновить статус')
+        toast.error(t('kanban.statusError'))
         console.error('Error updating task status:', error)
       }
     }
 
     const shiftStatus = async (task, direction) => {
-      const idx = columns.findIndex(col => col.status === task.status)
-      const next = columns[idx + direction]
+      const cols = columns.value
+      const idx = cols.findIndex(col => col.status === task.status)
+      const next = cols[idx + direction]
       if (!next) return
       await setTaskStatus(task, next.status)
     }
@@ -229,13 +232,9 @@ export default {
     }
 
     const getStatusText = (status) => {
-      const statusMap = {
-        todo: 'К выполнению',
-        in_progress: 'В процессе',
-        done: 'Выполнено',
-        archived: 'В архиве'
-      }
-      return statusMap[status] || status
+      const key = `taskStatus.${status}`
+      const translated = t(key)
+      return translated !== key ? translated : status
     }
 
     const getStatusChipClass = (status) => {
@@ -282,7 +281,7 @@ export default {
         }
         task.is_favorited = data.is_favorited
       } catch (error) {
-        toast.error('Не удалось обновить избранное')
+        toast.error(t('kanban.favoriteError'))
         console.error('toggleFavorite', error)
       }
     }

@@ -3,10 +3,10 @@
     <div class="card nf-card">
       <div class="card-body text-center">
         <div class="nf-badge">404</div>
-        <h2 class="mb-2">Страница не найдена</h2>
-        <p class="section-subtitle mb-4">Похоже, ссылка устарела или была введена с ошибкой.</p>
+        <h2 class="mb-2">{{ $t('notFound.title') }}</h2>
+        <p class="section-subtitle mb-4">{{ $t('notFound.subtitle') }}</p>
         <router-link to="/tasks" class="btn btn-primary">
-          <i class="fas fa-home me-2"></i>К задачам
+          <i class="fas fa-home me-2"></i>{{ $t('notFound.toTasks') }}
         </router-link>
       </div>
     </div>

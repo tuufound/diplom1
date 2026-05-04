@@ -5,15 +5,15 @@
         <div class="brand">
           <span class="brand-icon"><i class="fas fa-user-plus"></i></span>
           <div>
-            <h2 class="h4 mb-0">Регистрация</h2>
-            <p class="section-subtitle mb-0">Создай аккаунт за минуту</p>
+            <h2 class="h4 mb-0">{{ $t('auth.registerTitle') }}</h2>
+            <p class="section-subtitle mb-0">{{ $t('auth.registerSubtitle') }}</p>
           </div>
         </div>
       </div>
 
       <form @submit.prevent="handleSubmit" class="auth-form">
         <div class="mb-3">
-          <label for="username" class="form-label">Имя пользователя</label>
+          <label for="username" class="form-label">{{ $t('auth.username') }}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-user"></i></span>
             <input
@@ -21,14 +21,14 @@
               class="form-control"
               id="username"
               v-model="form.username"
-              placeholder="Введите имя пользователя"
+              :placeholder="$t('auth.placeholderUser')"
               required
             >
           </div>
         </div>
 
         <div class="mb-3">
-          <label for="email" class="form-label">Email</label>
+          <label for="email" class="form-label">{{ $t('auth.email') }}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-envelope"></i></span>
             <input
@@ -36,14 +36,14 @@
               class="form-control"
               id="email"
               v-model="form.email"
-              placeholder="Введите email"
+              :placeholder="$t('auth.placeholderEmail')"
               required
             >
           </div>
         </div>
 
         <div class="mb-3">
-          <label for="password" class="form-label">Пароль</label>
+          <label for="password" class="form-label">{{ $t('auth.password') }}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-lock"></i></span>
             <input
@@ -51,14 +51,14 @@
               class="form-control"
               id="password"
               v-model="form.password"
-              placeholder="Введите пароль"
+              :placeholder="$t('auth.placeholderPass')"
               required
             >
           </div>
         </div>
 
         <div class="mb-3">
-          <label for="confirmPassword" class="form-label">Подтвердите пароль</label>
+          <label for="confirmPassword" class="form-label">{{ $t('auth.confirmPassword') }}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-lock"></i></span>
             <input
@@ -66,7 +66,7 @@
               class="form-control"
               id="confirmPassword"
               v-model="form.confirmPassword"
-              placeholder="Подтвердите пароль"
+              :placeholder="$t('auth.placeholderConfirm')"
               required
             >
           </div>
@@ -74,13 +74,13 @@
 
         <button type="submit" class="btn btn-primary w-100 mb-3" :disabled="loading">
           <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
-          <span>Зарегистрироваться</span>
+          <span>{{ $t('auth.registerSubmit') }}</span>
         </button>
 
         <div class="text-center">
-          <p class="mb-0">Уже есть аккаунт?
+          <p class="mb-0">{{ $t('auth.hasAccount') }}
             <router-link to="/login" class="text-primary text-decoration-none">
-              Войти
+              {{ $t('auth.signInLink') }}
             </router-link>
           </p>
         </div>
@@ -91,6 +91,7 @@
 
 <script>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
@@ -101,6 +102,7 @@ export default {
     const authStore = useAuthStore()
     const router = useRouter()
     const toast = useToast()
+    const { t } = useI18n()
 
     const form = ref({
       username: '',
@@ -113,7 +115,7 @@ export default {
 
     const handleSubmit = async () => {
       if (form.value.password !== form.value.confirmPassword) {
-        toast.error('Пароли не совпадают')
+        toast.error(t('auth.passwordsMismatch'))
         return
       }
 

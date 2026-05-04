@@ -5,15 +5,15 @@
         <div class="brand">
           <span class="brand-icon"><i class="fas fa-check"></i></span>
           <div>
-            <h2 class="h4 mb-0">Вход</h2>
-            <p class="section-subtitle mb-0">Добро пожаловать обратно</p>
+            <h2 class="h4 mb-0">{{ $t('auth.loginTitle') }}</h2>
+            <p class="section-subtitle mb-0">{{ $t('auth.loginSubtitle') }}</p>
           </div>
         </div>
       </div>
 
       <form @submit.prevent="handleSubmit" class="auth-form">
         <div class="mb-3">
-          <label for="username" class="form-label">Имя пользователя</label>
+          <label for="username" class="form-label">{{ $t('auth.username') }}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-user"></i></span>
             <input
@@ -21,14 +21,14 @@
               class="form-control"
               id="username"
               v-model="form.username"
-              placeholder="Введите имя пользователя"
+              :placeholder="$t('auth.placeholderUser')"
               required
             >
           </div>
         </div>
 
         <div class="mb-3">
-          <label for="password" class="form-label">Пароль</label>
+          <label for="password" class="form-label">{{ $t('auth.password') }}</label>
           <div class="input-group">
             <span class="input-group-text"><i class="fas fa-lock"></i></span>
             <input
@@ -36,7 +36,7 @@
               class="form-control"
               id="password"
               v-model="form.password"
-              placeholder="Введите пароль"
+              :placeholder="$t('auth.placeholderPass')"
               required
             >
           </div>
@@ -44,23 +44,23 @@
 
         <div class="mb-3 form-check">
           <input type="checkbox" class="form-check-input" id="remember" v-model="form.remember">
-          <label class="form-check-label" for="remember">Запомнить меня</label>
+          <label class="form-check-label" for="remember">{{ $t('auth.remember') }}</label>
         </div>
 
         <button type="submit" class="btn btn-primary w-100 mb-3" :disabled="loading">
           <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
-          <span>Войти</span>
+          <span>{{ $t('auth.signIn') }}</span>
         </button>
 
         <div class="text-center">
-          <p class="mb-0">Еще нет аккаунта?
+          <p class="mb-0">{{ $t('auth.noAccount') }}
             <router-link to="/register" class="text-primary text-decoration-none">
-              Зарегистрироваться
+              {{ $t('auth.register') }}
             </router-link>
           </p>
           <p class="mb-0 mt-2">
             <router-link to="/forgot-password" class="text-decoration-none">
-              Забыли пароль?
+              {{ $t('auth.forgot') }}
             </router-link>
           </p>
         </div>

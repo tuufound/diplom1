@@ -1,5 +1,6 @@
 <template>
   <div class="profile-page page-shell">
+    <div class="page-content-surface">
     <div class="profile-head">
       <div>
         <h2 class="page-title">
@@ -217,6 +218,7 @@
           </div>
         </div>
       </div>
+    </div>
     </div>
   </div>
 </template>

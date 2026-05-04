@@ -1,6 +1,6 @@
 <template>
   <div class="tasks-page page-shell">
-    <div class="tasks-surface">
+    <div class="page-content-surface">
       <div class="tasks-head">
         <div>
           <h2 class="page-title"><i class="fas fa-list-check me-2"></i>Задачи</h2>
@@ -56,8 +56,7 @@
         </div>
       </div>
 
-      <div v-else class="task-rows">
-        <transition-group name="slide-up" tag="div" class="task-rows">
+      <transition-group v-else name="task-list" tag="div" class="task-rows">
           <article
             v-for="item in visibleTasksFiltered"
             :key="item.task.id"
@@ -71,9 +70,10 @@
                   v-if="hasSubtasks(item.task.id)"
                   class="collapse-btn"
                   type="button"
+                  :aria-expanded="isExpanded(item.task.id)"
                   @click.stop="toggleSubtasks(item.task.id)"
                 >
-                  <i class="fas" :class="isExpanded(item.task.id) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                  <i class="fas fa-chevron-right collapse-chevron" :class="{ 'is-open': isExpanded(item.task.id) }"></i>
                 </button>
                 <span v-else class="collapse-placeholder"></span>
                 <h6 class="task-title">{{ item.task.title }}</h6>
@@ -118,12 +118,11 @@
                 <i class="fas fa-trash"></i>
               </button>
               <router-link class="icon-btn" :to="`/tasks/create?parent=${item.task.id}`" title="Подзадача">
-                <i class="fas fa-code-branch"></i>
+                <i class="fas fa-folder"></i>
               </router-link>
             </div>
           </article>
-        </transition-group>
-      </div>
+      </transition-group>
 
       <div v-if="timerModalOpen" class="timer-modal-backdrop" @click.self="timerModalOpen = false">
         <div class="timer-modal card shadow" @click.stop>
@@ -601,19 +600,6 @@ export default {
   margin: 0 auto;
 }
 
-.tasks-surface {
-  position: relative;
-  border-radius: 24px;
-  padding: 16px;
-  border: 1px solid rgba(224, 206, 232, 0.7);
-  background:
-    radial-gradient(circle at 12% 15%, rgba(245, 195, 210, 0.25), transparent 42%),
-    radial-gradient(circle at 92% 10%, rgba(213, 193, 246, 0.22), transparent 46%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(252, 241, 248, 0.68));
-  box-shadow: 0 16px 36px rgba(136, 110, 149, 0.12);
-  backdrop-filter: blur(10px);
-}
-
 .tasks-head {
   display: flex;
   justify-content: space-between;
@@ -973,6 +959,30 @@ export default {
   .tasks-head {
     flex-direction: column;
   }
+}
+
+.task-list-move {
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.task-list-enter-active,
+.task-list-leave-active {
+  transition: opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.task-list-enter-from,
+.task-list-leave-to {
+  opacity: 0;
+}
+
+.collapse-chevron {
+  display: block;
+  transform: rotate(0deg);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.collapse-chevron.is-open {
+  transform: rotate(90deg);
 }
 
 </style>

@@ -194,11 +194,31 @@ class ProjectRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 class ProjectMembershipCreateView(generics.CreateAPIView):
     serializer_class = ProjectMembershipSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["project"] = get_object_or_404(Project, id=self.kwargs["project_id"])
+        return context
+
     def perform_create(self, serializer):
-        project = generics.get_object_or_404(Project, id=self.kwargs["project_id"])
+        project = get_object_or_404(Project, id=self.kwargs["project_id"])
         if project.owner_id != self.request.user.id:
             raise PermissionDenied("Добавлять участников может только владелец.")
         serializer.save(project=project)
+
+
+class ProjectMembershipDestroyView(generics.DestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return ProjectMembership.objects.filter(project_id=self.kwargs["project_id"])
+
+    def perform_destroy(self, instance):
+        project = instance.project
+        if project.owner_id != self.request.user.id:
+            raise PermissionDenied("Удалять участников может только владелец проекта.")
+        if instance.user_id == project.owner_id:
+            raise PermissionDenied("Нельзя удалить владельца проекта.")
+        instance.delete()
 
 
 class TaskListCreateView(generics.ListCreateAPIView):

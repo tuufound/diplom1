@@ -145,6 +145,9 @@ export default {
   addProjectMembership(projectId, data) {
     return api.post(`/projects/${projectId}/memberships/`, data)
   },
+  removeProjectMembership(projectId, membershipId) {
+    return api.delete(`/projects/${projectId}/memberships/${membershipId}/`)
+  },
 
   // Time entry endpoints
   getTimeEntries() {

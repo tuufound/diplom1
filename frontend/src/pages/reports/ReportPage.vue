@@ -1,5 +1,6 @@
 <template>
   <div class="reports-container page-shell">
+    <div class="page-content-surface">
     <div class="page-head">
       <div>
         <h2 class="page-title"><i class="fas fa-chart-pie me-2"></i>Отчеты</h2>
@@ -112,6 +113,7 @@
         </div>
       </div>
     </section>
+    </div>
   </div>
 </template>
 

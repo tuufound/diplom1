@@ -9,6 +9,7 @@ from .views import (
     PriorityListCreateView,
     ProjectListCreateView,
     ProjectMembershipCreateView,
+    ProjectMembershipDestroyView,
     ProjectRetrieveUpdateDestroyView,
     RegisterView,
     ReportView,
@@ -33,6 +34,11 @@ urlpatterns = [
     path("priorities/", PriorityListCreateView.as_view(), name="priority_list_create"),
     path("projects/", ProjectListCreateView.as_view(), name="project_list_create"),
     path("projects/<int:pk>/", ProjectRetrieveUpdateDestroyView.as_view(), name="project_detail"),
+    path(
+        "projects/<int:project_id>/memberships/<int:pk>/",
+        ProjectMembershipDestroyView.as_view(),
+        name="project_membership_destroy",
+    ),
     path(
         "projects/<int:project_id>/memberships/",
         ProjectMembershipCreateView.as_view(),

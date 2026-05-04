@@ -1,6 +1,6 @@
 <template>
   <div class="time-page page-shell">
-    <div class="time-surface">
+    <div class="page-content-surface">
       <div class="time-head">
         <div>
           <h2 class="page-title"><i class="fas fa-clock me-2"></i>Время</h2>
@@ -390,19 +390,6 @@ export default {
 .time-page {
   max-width: 1320px;
   margin: 0 auto;
-}
-
-.time-surface {
-  position: relative;
-  border-radius: 24px;
-  padding: 16px;
-  border: 1px solid rgba(224, 206, 232, 0.7);
-  background:
-    radial-gradient(circle at 10% 16%, rgba(245, 195, 210, 0.25), transparent 42%),
-    radial-gradient(circle at 94% 10%, rgba(213, 193, 246, 0.22), transparent 46%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(252, 241, 248, 0.66));
-  box-shadow: 0 16px 36px rgba(136, 110, 149, 0.12);
-  backdrop-filter: blur(10px);
 }
 
 .time-head {

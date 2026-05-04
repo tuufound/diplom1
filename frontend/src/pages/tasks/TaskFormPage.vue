@@ -1,5 +1,6 @@
 <template>
   <div class="task-form-container page-shell">
+    <div class="page-content-surface">
     <div class="form-head">
       <div>
         <h2 class="page-title">
@@ -185,6 +186,7 @@
         </div>
       </div>
     </form>
+    </div>
   </div>
 </template>
 

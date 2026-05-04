@@ -53,12 +53,50 @@ class ProjectMembershipSerializer(serializers.ModelSerializer):
         queryset=User.objects.all(),
         source="user",
         write_only=True,
+        required=False,
+        allow_null=True,
     )
+    username = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = ProjectMembership
-        fields = ("id", "user", "user_id", "role", "created_at")
+        fields = ("id", "user", "user_id", "username", "role", "created_at")
         read_only_fields = ("id", "created_at", "user")
+
+    def validate(self, attrs):
+        data = getattr(self, "initial_data", None) or {}
+        user = attrs.get("user")
+        username_raw = (data.get("username") or "").strip()
+
+        if user and username_raw:
+            raise serializers.ValidationError(
+                {"non_field_errors": ["Укажите либо user_id, либо логин, но не оба."]}
+            )
+        if not user and not username_raw:
+            raise serializers.ValidationError(
+                {"username": ["Укажите логин пользователя или user_id."]}
+            )
+        if username_raw and not user:
+            try:
+                attrs["user"] = User.objects.get(username__iexact=username_raw)
+            except User.DoesNotExist:
+                raise serializers.ValidationError(
+                    {"username": ["Пользователь с таким логином не найден."]}
+                )
+
+        project = self.context.get("project")
+        resolved = attrs.get("user")
+        if project and resolved:
+            if project.owner_id == resolved.id:
+                raise serializers.ValidationError(
+                    {"username": ["Этот пользователь уже владелец проекта."]}
+                )
+            if ProjectMembership.objects.filter(project=project, user=resolved).exists():
+                raise serializers.ValidationError(
+                    {"username": ["Пользователь уже в команде."]}
+                )
+
+        return attrs
 
 
 class ProjectSerializer(serializers.ModelSerializer):

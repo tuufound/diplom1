@@ -1,6 +1,6 @@
 <template>
   <div class="kanban-page page-shell">
-    <div class="kanban-surface">
+    <div class="page-content-surface">
       <div class="kanban-head">
         <div>
           <h2 class="page-title"><i class="fas fa-table-columns me-2"></i>Канбан</h2>
@@ -339,19 +339,6 @@ export default {
 .kanban-page {
   max-width: 1320px;
   margin: 0 auto;
-}
-
-.kanban-surface {
-  position: relative;
-  border-radius: 24px;
-  padding: 16px;
-  border: 1px solid rgba(224, 206, 232, 0.7);
-  background:
-    radial-gradient(circle at 10% 16%, rgba(245, 195, 210, 0.25), transparent 42%),
-    radial-gradient(circle at 94% 10%, rgba(213, 193, 246, 0.22), transparent 46%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(244, 236, 254, 0.66));
-  box-shadow: 0 16px 36px rgba(136, 110, 149, 0.12);
-  backdrop-filter: blur(10px);
 }
 
 .kanban-grid {

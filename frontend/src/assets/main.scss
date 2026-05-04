@@ -41,6 +41,10 @@
   --surface-1: rgba(255, 255, 255, 0.4);
   --surface-2: rgba(255, 255, 255, 0.6);
 
+  // Подложка основного блока страниц (как раньше: стекло + градиенты, без розового)
+  --page-surface-border: rgba(198, 214, 240, 0.72);
+  --page-surface-shadow: 0 16px 36px rgba(95, 110, 160, 0.14);
+
   --blur-amount: 20px;
 }
 
@@ -65,6 +69,9 @@
 
   --surface-1: rgba(255, 255, 255, 0.05);
   --surface-2: rgba(255, 255, 255, 0.1);
+
+  --page-surface-border: rgba(120, 138, 200, 0.32);
+  --page-surface-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
 }
 
 // ==========================================
@@ -463,6 +470,33 @@ h1, h2, h3, h4, h5, h6 {
 .page-shell {
   max-width: 1400px;
   margin: 0 auto;
+}
+
+// Полупрозрачная панель (как в канбане/списке задач раньше: те же слои и blur, цвет без розового)
+.page-content-surface {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border-radius: 24px;
+  padding: 16px;
+  border: 1px solid var(--page-surface-border);
+  background:
+    radial-gradient(circle at 10% 16%, rgba(183, 220, 255, 0.28), transparent 42%),
+    radial-gradient(circle at 94% 10%, rgba(200, 190, 250, 0.24), transparent 46%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(236, 242, 255, 0.68));
+  box-shadow: var(--page-surface-shadow);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+[data-theme='dark'] .page-content-surface {
+  border: 1px solid var(--page-surface-border);
+  background:
+    radial-gradient(circle at 10% 16%, rgba(100, 140, 220, 0.22), transparent 42%),
+    radial-gradient(circle at 94% 10%, rgba(140, 110, 200, 0.18), transparent 46%),
+    linear-gradient(135deg, rgba(42, 44, 68, 0.9), rgba(30, 34, 56, 0.84));
+  box-shadow: var(--page-surface-shadow);
 }
 
 // ==========================================

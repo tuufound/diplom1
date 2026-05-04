@@ -81,6 +81,4 @@ export default {
     padding: 12px;
   }
 }
-
-@import './assets/main.scss';
 </style>

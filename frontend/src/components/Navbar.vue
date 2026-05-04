@@ -21,6 +21,11 @@
             </router-link>
           </li>
           <li class="nav-item">
+            <router-link class="nav-link" to="/projects">
+              <i class="fas fa-folder-open me-1"></i> Проекты
+            </router-link>
+          </li>
+          <li class="nav-item">
             <router-link class="nav-link" to="/time-tracking">
               <i class="fas fa-clock me-1"></i> Таймер
             </router-link>

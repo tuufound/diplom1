@@ -22,7 +22,7 @@
                 <i class="fas fa-user"></i>
               </span>
             </div>
-            <div class="d-flex justify-content-center gap-2 mb-3">
+            <div v-if="isEditingProfile" class="d-flex justify-content-center gap-2 mb-3">
               <input
                 ref="avatarInput"
                 class="d-none"
@@ -39,13 +39,10 @@
             </div>
             <h4 class="mb-1">{{ user?.username }}</h4>
             <p class="text-muted mb-3">{{ user?.email }}</p>
-            <div class="d-flex justify-content-center gap-2">
+            <div v-if="!isEditingProfile" class="d-flex justify-content-center gap-2">
               <button class="btn btn-outline-primary btn-sm" @click="startEditing">
                 <i class="fas fa-edit me-1"></i> Редактировать профиль
               </button>
-              <router-link class="btn btn-primary btn-sm" to="/tasks">
-                <i class="fas fa-list-check me-1"></i> К задачам
-              </router-link>
             </div>
           </div>
         </div>

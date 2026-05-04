@@ -93,6 +93,10 @@
                   {{ project.name }}
                 </option>
               </select>
+              <small class="form-help d-block mt-1">
+                Нет нужного проекта?
+                <router-link to="/projects">Создай на странице «Проекты»</router-link>
+              </small>
             </div>
             <div class="col-md-6">
               <label for="category" class="form-label">Категория</label>
@@ -381,6 +385,10 @@ export default {
     onMounted(() => {
       if (!isEditing.value && route.query.parent) {
         form.value.parent_task = Number(route.query.parent)
+      }
+      if (!isEditing.value && route.query.project) {
+        const pid = Number(route.query.project)
+        if (!Number.isNaN(pid)) form.value.project = pid
       }
       fetchTask()
       fetchPriorities()

@@ -27,13 +27,18 @@
               <button type="button" class="filter-pill" :class="{ active: taskScope === 'all' }" @click="setTaskScope('all')">Все задачи</button>
               <button type="button" class="filter-pill" :class="{ active: taskScope === 'collaborative' }" @click="setTaskScope('collaborative')">Совместные</button>
               <button type="button" class="filter-pill" :class="{ active: taskScope === 'favorites' }" @click="setTaskScope('favorites')"><i class="fas fa-star me-1"></i>Избранное</button>
-            </div>
-            <div class="status-filters">
-              <button type="button" class="filter-pill" :class="{ active: statusFilter === 'all' }" @click="statusFilter = 'all'">Все статусы</button>
-              <button type="button" class="filter-pill" :class="{ active: statusFilter === 'todo' }" @click="statusFilter = 'todo'">К выполнению</button>
-              <button type="button" class="filter-pill" :class="{ active: statusFilter === 'in_progress' }" @click="statusFilter = 'in_progress'">В процессе</button>
-              <button type="button" class="filter-pill" :class="{ active: statusFilter === 'done' }" @click="statusFilter = 'done'">Выполнено</button>
-              <button type="button" class="filter-pill" :class="{ active: statusFilter === 'archived' }" @click="statusFilter = 'archived'">Архив</button>
+              <select
+                id="taskStatusFilter"
+                v-model="statusFilter"
+                class="form-select status-filter-select"
+                aria-label="Фильтр по статусу"
+              >
+                <option value="all">Все статусы</option>
+                <option value="todo">К выполнению</option>
+                <option value="in_progress">В процессе</option>
+                <option value="done">Выполнено</option>
+                <option value="archived">Архив</option>
+              </select>
             </div>
           </div>
           <div class="kpis">
@@ -671,6 +676,28 @@ export default {
   background: linear-gradient(135deg, rgba(246, 232, 245, 0.96), rgba(241, 226, 247, 0.96));
   color: #3a4c78;
   border-color: rgba(194, 170, 211, 0.9);
+}
+
+.status-filter-select {
+  flex-shrink: 0;
+  min-width: 188px;
+  max-width: 100%;
+  border: 1px solid rgba(216, 196, 226, 0.8);
+  border-radius: 999px;
+  color: #65567d;
+  background-color: rgba(255, 255, 255, 0.92);
+  font-size: 0.82rem;
+  line-height: 1.25;
+  padding: 7px 2.25rem 7px 12px;
+  height: auto;
+  min-height: 0;
+  box-shadow: none;
+}
+
+.status-filter-select:focus {
+  border-color: rgba(194, 170, 211, 0.95);
+  box-shadow: 0 0 0 0.2rem rgba(176, 131, 200, 0.2);
+  color: #3a4c78;
 }
 
 .kpis {

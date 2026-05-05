@@ -7,6 +7,7 @@ from .models import (
     Category,
     Priority,
     Project,
+    ProjectInvitation,
     ProjectMembership,
     Task,
     TaskCollaborator,
@@ -20,6 +21,18 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = User
         fields = ("id", "username", "email", "password")
         extra_kwargs = {"password": {"write_only": True}}
+
+    def validate_username(self, value):
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError("Пользователь с таким логином уже существует.")
+        return value
+
+    def validate_email(self, value):
+        if not value:
+            raise serializers.ValidationError("Email обязателен.")
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("Пользователь с таким email уже существует.")
+        return value
 
     def create(self, validated_data):
         return User.objects.create_user(
@@ -405,3 +418,14 @@ class TimeEntrySerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["task"] = TaskSerializer(instance.task, context=self.context).data
         return data
+
+
+class ProjectInvitationSerializer(serializers.ModelSerializer):
+    inviter = UserSerializer(read_only=True)
+    invitee = UserSerializer(read_only=True)
+    project_name = serializers.CharField(source="project.name", read_only=True)
+
+    class Meta:
+        model = ProjectInvitation
+        fields = ("id", "project", "project_name", "inviter", "invitee", "role", "status", "created_at")
+        read_only_fields = ("id", "inviter", "invitee", "status", "created_at")

@@ -347,12 +347,12 @@ export default {
 }
 
 .kanban-column {
-  background: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(218, 202, 229, 0.78);
+  background: var(--glass-panel-bg);
+  border: 1px solid var(--glass-border);
   border-radius: 20px;
   padding: 10px;
   min-height: 360px;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--blur-amount));
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
@@ -403,8 +403,9 @@ export default {
   border-radius: 12px;
   padding: 10px;
   margin-bottom: 8px;
-  background: #ffffff;
-  backdrop-filter: none;
+  background: var(--card-bg);
+  backdrop-filter: blur(var(--blur-amount));
+  -webkit-backdrop-filter: blur(var(--blur-amount));
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -531,12 +532,46 @@ export default {
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  border: 1px solid rgba(219, 201, 229, 0.88);
-  background: #ffffff;
-  color: #5f4b84;
+  border: 1px solid var(--glass-border);
+  background: var(--surface-1);
+  color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Dark theme fixes: эта страница тоже рисовала "белые" колонки/карточки */
+:global([data-theme="dark"]) .kanban-column {
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+:global([data-theme="dark"]) .column-head h5,
+:global([data-theme="dark"]) .task-title {
+  color: var(--text-primary);
+}
+
+:global([data-theme="dark"]) .task-desc,
+:global([data-theme="dark"]) .column-empty {
+  color: var(--text-muted);
+}
+
+:global([data-theme="dark"]) .kanban-column.column-todo,
+:global([data-theme="dark"]) .kanban-column.column-progress,
+:global([data-theme="dark"]) .kanban-column.column-done,
+:global([data-theme="dark"]) .kanban-column.column-archived {
+  background: var(--glass-panel-bg);
+}
+
+:global([data-theme="dark"]) .count {
+  background: rgba(70, 70, 74, 0.55);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+}
+
+:global([data-theme="dark"]) .chip {
+  background: rgba(70, 70, 74, 0.42);
+  border-color: rgba(255, 255, 255, 0.09);
+  color: var(--text-secondary);
 }
 
 .badge.subtask {

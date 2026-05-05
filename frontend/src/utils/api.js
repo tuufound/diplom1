@@ -148,6 +148,15 @@ export default {
   removeProjectMembership(projectId, membershipId) {
     return api.delete(`/projects/${projectId}/memberships/${membershipId}/`)
   },
+  sendProjectInvitation(projectId, data) {
+    return api.post(`/projects/${projectId}/invite/`, data)
+  },
+  getInvitations() {
+    return api.get('/invitations/')
+  },
+  respondInvitation(id, action) {
+    return api.post(`/invitations/${id}/respond/`, { action })
+  },
 
   // Time entry endpoints
   getTimeEntries() {

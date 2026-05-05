@@ -181,6 +181,36 @@ class TaskCollaborator(models.Model):
         return f"{self.user.username} ↔ {self.task.title}"
 
 
+class ProjectInvitation(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_ACCEPTED = "accepted"
+    STATUS_DECLINED = "declined"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_ACCEPTED, "Accepted"),
+        (STATUS_DECLINED, "Declined"),
+    ]
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="invitations")
+    inviter = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_invitations")
+    invitee = models.ForeignKey(User, on_delete=models.CASCADE, related_name="received_invitations")
+    role = models.CharField(max_length=20, choices=ProjectMembership.ROLE_CHOICES, default=ProjectMembership.ROLE_VIEWER)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "invitee"],
+                condition=models.Q(status="pending"),
+                name="unique_pending_invitation",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.inviter} → {self.invitee} ({self.project.name})"
+
+
 class TimeEntry(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='time_entries')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='time_entries')

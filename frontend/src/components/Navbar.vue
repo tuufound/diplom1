@@ -59,6 +59,7 @@ export default {
       { path: '/projects', icon: 'fas fa-folder', label: t('nav.projects') },
       { path: '/time-tracking', icon: 'fas fa-clock', label: t('nav.timer') },
       { path: '/reports', icon: 'fas fa-chart-pie', label: t('nav.reports') },
+      { path: '/invitations', icon: 'fas fa-envelope', label: t('nav.invitations') },
       { path: '/profile', icon: 'fas fa-user-circle', label: t('nav.profile') }
     ])
 

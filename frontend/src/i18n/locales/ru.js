@@ -6,6 +6,7 @@ export default {
     projects: 'Проекты',
     timer: 'Таймер',
     reports: 'Отчеты',
+    invitations: 'Приглашения',
     profile: 'Профиль'
   },
   footer: {
@@ -36,6 +37,7 @@ export default {
     resetPassword: 'Сменить пароль',
     backToLogin: 'Ко входу',
     passwordsMismatch: 'Пароли не совпадают',
+    registerError: 'Ошибка регистрации',
     passwordUpdated: 'Пароль обновлен, теперь можно войти',
     passwordUpdateFailed: 'Не удалось обновить пароль',
     hasAccount: 'Уже есть аккаунт?',
@@ -83,7 +85,10 @@ export default {
     newTask: 'Новая задача',
     searchPlaceholder: 'Поиск по названию и описанию',
     statusFilterAria: 'Фильтр по статусу',
+    projectFilterAria: 'Фильтр по проекту',
     allStatuses: 'Все статусы',
+    allProjects: 'Все проекты',
+    noProject: 'Без проекта',
     allTasks: 'Все задачи',
     collaborative: 'Совместные',
     favorites: 'Избранное',
@@ -94,6 +99,9 @@ export default {
     favorite: 'Избранное',
     timer: 'Таймер',
     subtask: 'Подзадача',
+    viewList: 'Список',
+    viewByProject: 'По проектам',
+    groupPersonal: 'Личные',
     timerModalTitle: 'Таймер',
     timerTaskLabel: 'Задача:',
     limitMinutes: 'Лимит времени (минуты)',
@@ -244,6 +252,7 @@ export default {
     loginRequired: 'Введите логин пользователя',
     invited: 'Приглашён: {login}',
     added: 'Добавлен: {name}',
+    inviteSent: 'Приглашение отправлено: {login}',
     memberRemoved: 'Участник удалён',
     memberDeleteError: 'Не удалось удалить участника',
     addMemberError: 'Не удалось добавить участника',
@@ -322,7 +331,10 @@ export default {
     pdfTitle: 'Отчет по задачам',
     fmtHm: '{h}ч {m}м',
     fmtM: '{m}м',
-    fmtS: '{s} с'
+    fmtS: '{s} с',
+    timeByProject: 'Время по проектам',
+    projectsStats: 'Статистика по проектам',
+    noProject: 'Без проекта'
   },
   profile: {
     title: 'Профиль',

@@ -79,6 +79,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/invitations',
+    name: 'Invitations',
+    component: () => import('@/pages/InvitationsPage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/:catchAll(.*)',
     name: 'NotFound',
     component: () => import('@/pages/NotFoundPage.vue')

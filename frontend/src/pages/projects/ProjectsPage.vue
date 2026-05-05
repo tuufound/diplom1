@@ -495,11 +495,10 @@ export default {
       const role = inviteRoleByProject[p.id] || 'editor'
       inviteLoading.value = p.id
       try {
-        await api.addProjectMembership(p.id, { username: login, role })
-        toast.success(t('projects.invited', { login }))
+        await api.sendProjectInvitation(p.id, { username: login, role })
+        toast.success(t('projects.inviteSent', { login }))
         inviteQueryByProject[p.id] = ''
         inviteHitsByProject[p.id] = []
-        await loadProjects()
       } catch (e) {
         const msg = membershipErrorMessage(e.response?.data) || t('projects.addMemberError')
         toast.error(typeof msg === 'string' ? msg : t('projects.error'))
@@ -512,11 +511,10 @@ export default {
       const role = inviteRoleByProject[p.id] || 'editor'
       inviteLoading.value = p.id
       try {
-        await api.addProjectMembership(p.id, { user_id: u.id, role })
-        toast.success(t('projects.added', { name: u.username }))
+        await api.sendProjectInvitation(p.id, { user_id: u.id, role })
+        toast.success(t('projects.inviteSent', { login: u.username }))
         inviteQueryByProject[p.id] = ''
         inviteHitsByProject[p.id] = []
-        await loadProjects()
       } catch (e) {
         const msg = membershipErrorMessage(e.response?.data) || t('projects.addMemberError')
         toast.error(typeof msg === 'string' ? msg : t('projects.error'))
@@ -582,6 +580,27 @@ export default {
 .projects-page {
   max-width: 1400px;
   margin: 0 auto;
+  position: relative;
+}
+
+/* На этой странице усиливаем фон именно у .page-content-surface,
+   потому что он и создаёт ощущение "всё на белом". */
+.projects-page .page-content-surface {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(102, 126, 234, 0.24), transparent 44%),
+    radial-gradient(circle at 92% 8%, rgba(118, 75, 162, 0.18), transparent 52%),
+    radial-gradient(circle at 28% 96%, rgba(99, 179, 237, 0.16), transparent 48%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.62), rgba(236, 242, 255, 0.42)) !important;
+  border-color: rgba(160, 186, 235, 0.75) !important;
+}
+
+[data-theme="dark"] .projects-page .page-content-surface {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(102, 126, 234, 0.26), transparent 44%),
+    radial-gradient(circle at 92% 8%, rgba(118, 75, 162, 0.2), transparent 52%),
+    radial-gradient(circle at 28% 96%, rgba(99, 179, 237, 0.16), transparent 48%),
+    linear-gradient(135deg, rgba(52, 52, 58, 0.92), rgba(34, 34, 38, 0.88)) !important;
+  border-color: rgba(120, 122, 130, 0.42) !important;
 }
 
 // Page Header
@@ -682,10 +701,13 @@ export default {
 
 // Project Card
 .project-card {
-  background: var(--glass-bg);
+  background:
+    radial-gradient(circle at 18% 16%, rgba(102, 126, 234, 0.14), transparent 46%),
+    radial-gradient(circle at 88% 10%, rgba(118, 75, 162, 0.1), transparent 52%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(242, 246, 255, 0.58));
   backdrop-filter: blur(var(--blur-amount));
   -webkit-backdrop-filter: blur(var(--blur-amount));
-  border: 1px solid var(--glass-border);
+  border: 1px solid rgba(198, 214, 240, 0.85);
   border-radius: 20px;
   padding: 1.5rem;
   min-width: 0;
@@ -695,10 +717,18 @@ export default {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
-    border-color: var(--glass-border-strong);
+    border-color: rgba(160, 186, 235, 0.95);
     box-shadow: var(--glass-shadow-hover);
     transform: translateY(-2px);
   }
+}
+
+[data-theme="dark"] .project-card {
+  background:
+    radial-gradient(circle at 18% 16%, rgba(102, 126, 234, 0.22), transparent 46%),
+    radial-gradient(circle at 88% 10%, rgba(118, 75, 162, 0.18), transparent 52%),
+    linear-gradient(135deg, rgba(54, 54, 60, 0.92), rgba(34, 34, 38, 0.86));
+  border: 1px solid rgba(120, 122, 130, 0.42);
 }
 
 .project-card-header {
@@ -818,11 +848,20 @@ export default {
 
 // Invite Section
 .invite-section {
-  border-top: 1px solid var(--glass-border);
-  padding-top: 1rem;
-  margin-bottom: 0.5rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.38);
+  border: 1px solid rgba(198, 214, 240, 0.65);
+  border-radius: 16px;
   min-width: 0;
   max-width: 100%;
+}
+
+.projects-page [data-theme="dark"] .invite-section,
+[data-theme="dark"] .projects-page .invite-section {
+  background: rgba(70, 70, 74, 0.42);
+  border-color: rgba(120, 122, 130, 0.28);
 }
 
 .invite-toggle {
@@ -926,8 +965,11 @@ export default {
 
 // Members Section
 .members-section {
-  border-top: 1px solid var(--glass-border);
-  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.38);
+  border: 1px solid rgba(198, 214, 240, 0.65);
+  border-radius: 16px;
 }
 
 .members-toggle {
@@ -935,18 +977,21 @@ export default {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0;
-  background: none;
-  border: none;
+  padding: 0.625rem 1rem;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(198, 214, 240, 0.65);
+  border-radius: 12px;
   color: var(--text-secondary);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
 
   &:hover,
   &.active {
     color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    background: rgba(255, 255, 255, 0.7);
   }
 
   .members-count {
@@ -963,6 +1008,11 @@ export default {
   &.active i.fa-chevron-down {
     transform: rotate(180deg);
   }
+}
+
+[data-theme="dark"] .members-toggle {
+  background: rgba(70, 70, 74, 0.5);
+  border-color: rgba(120, 122, 130, 0.28);
 }
 
 .members-full-list {

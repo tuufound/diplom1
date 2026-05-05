@@ -44,6 +44,14 @@
   // Подложка основного блока страниц (как раньше: стекло + градиенты, без розового)
   --page-surface-border: rgba(198, 214, 240, 0.72);
   --page-surface-shadow: 0 16px 36px rgba(95, 110, 160, 0.14);
+  --page-surface-bg:
+    radial-gradient(circle at 10% 16%, rgba(183, 220, 255, 0.28), transparent 42%),
+    radial-gradient(circle at 94% 10%, rgba(200, 190, 250, 0.24), transparent 46%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(236, 242, 255, 0.68));
+
+  // Унифицированные фоны "окон" (карточек/панелей)
+  --card-bg: var(--glass-bg);
+  --glass-panel-bg: var(--glass-bg);
 
   --blur-amount: 20px;
 }
@@ -76,6 +84,22 @@
 
   --page-surface-border: rgba(120, 122, 130, 0.38);
   --page-surface-shadow: 0 16px 40px rgba(0, 0, 0, 0.42);
+  --page-surface-bg:
+    radial-gradient(circle at 10% 16%, rgba(102, 126, 234, 0.18), transparent 44%),
+    radial-gradient(circle at 94% 10%, rgba(118, 75, 162, 0.14), transparent 50%),
+    radial-gradient(circle at 26% 92%, rgba(99, 179, 237, 0.1), transparent 48%),
+    linear-gradient(135deg, rgba(48, 48, 56, 0.92), rgba(30, 30, 36, 0.88));
+
+  // Тёмный режим: градиентные "окна" по всему приложению
+  --card-bg:
+    radial-gradient(circle at 18% 16%, rgba(102, 126, 234, 0.22), transparent 46%),
+    radial-gradient(circle at 88% 10%, rgba(118, 75, 162, 0.18), transparent 52%),
+    radial-gradient(circle at 30% 95%, rgba(99, 179, 237, 0.14), transparent 48%),
+    linear-gradient(135deg, rgba(54, 54, 60, 0.92), rgba(34, 34, 38, 0.86));
+  --glass-panel-bg:
+    radial-gradient(circle at 20% 0%, rgba(102, 126, 234, 0.18), transparent 52%),
+    radial-gradient(circle at 85% 15%, rgba(118, 75, 162, 0.16), transparent 55%),
+    linear-gradient(135deg, rgba(52, 52, 58, 0.9), rgba(34, 34, 40, 0.84));
 }
 
 // ==========================================
@@ -128,7 +152,7 @@ body {
 // ==========================================
 
 .glass {
-  background: var(--glass-bg);
+  background: var(--glass-panel-bg);
   backdrop-filter: blur(var(--blur-amount));
   -webkit-backdrop-filter: blur(var(--blur-amount));
   border: 1px solid var(--glass-border);
@@ -137,7 +161,7 @@ body {
 }
 
 .glass-strong {
-  background: var(--glass-bg-hover);
+  background: var(--glass-panel-bg);
   backdrop-filter: blur(calc(var(--blur-amount) * 1.5));
   -webkit-backdrop-filter: blur(calc(var(--blur-amount) * 1.5));
   border: 1px solid var(--glass-border-strong);
@@ -147,7 +171,7 @@ body {
 
 // Card component - Glass style
 .card {
-  background: var(--glass-bg);
+  background: var(--card-bg);
   backdrop-filter: blur(var(--blur-amount));
   -webkit-backdrop-filter: blur(var(--blur-amount));
   border: 1px solid var(--glass-border);
@@ -485,10 +509,7 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 24px;
   padding: 16px;
   border: 1px solid var(--page-surface-border);
-  background:
-    radial-gradient(circle at 10% 16%, rgba(183, 220, 255, 0.28), transparent 42%),
-    radial-gradient(circle at 94% 10%, rgba(200, 190, 250, 0.24), transparent 46%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(236, 242, 255, 0.68));
+  background: var(--page-surface-bg);
   box-shadow: var(--page-surface-shadow);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -496,11 +517,7 @@ h1, h2, h3, h4, h5, h6 {
 
 [data-theme='dark'] .page-content-surface {
   border: 1px solid var(--page-surface-border);
-  /* Чуть светлее основного фона (--app-bg-mid / deep) */
-  background:
-    radial-gradient(circle at 10% 16%, rgba(88, 90, 96, 0.45), transparent 42%),
-    radial-gradient(circle at 94% 10%, rgba(82, 84, 92, 0.38), transparent 46%),
-    linear-gradient(135deg, rgba(48, 48, 52, 0.94), rgba(40, 40, 44, 0.9));
+  background: var(--page-surface-bg);
   box-shadow: var(--page-surface-shadow);
 }
 

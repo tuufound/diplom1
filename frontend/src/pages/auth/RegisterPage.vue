@@ -131,7 +131,15 @@ export default {
         })
         router.push('/login')
       } catch (error) {
-        console.error('Registration error:', error)
+        const data = error?.response?.data
+        if (data && typeof data === 'object') {
+          const messages = Object.entries(data)
+            .flatMap(([, v]) => Array.isArray(v) ? v : [v])
+            .join(' ')
+          toast.error(messages)
+        } else {
+          toast.error(t('auth.registerError'))
+        }
       } finally {
         loading.value = false
       }

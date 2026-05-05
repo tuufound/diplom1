@@ -15,7 +15,7 @@
           type="button"
           class="btn btn-outline-secondary favorite-head-btn"
           :class="{ active: isFavorited }"
-          :disabled="favoriteLoading"
+          :disabled="favoriteLoading || isViewer"
           :title="$t('taskForm.favorite')"
           @click="toggleFavorite"
         >
@@ -29,6 +29,9 @@
     </div>
 
     <form class="form-grid" @submit.prevent="handleSubmit">
+      <div v-if="isViewer" class="alert alert-info text-center mb-3">
+        <i class="fas fa-eye me-1"></i>{{ $t('taskForm.viewOnlyEdit') }}
+      </div>
       <div class="card form-card">
         <div class="card-body">
           <div class="form-section-title">{{ $t('taskForm.mainSection') }}</div>
@@ -40,6 +43,7 @@
               id="title"
               v-model="form.title"
               :placeholder="$t('taskForm.titlePh')"
+              :disabled="isViewer"
               required
             >
             <small class="form-help">{{ $t('taskForm.titleHelp') }}</small>
@@ -53,6 +57,7 @@
               v-model="form.description"
               rows="4"
               :placeholder="$t('taskForm.descPh')"
+              :disabled="isViewer"
             ></textarea>
           </div>
         </div>
@@ -64,7 +69,7 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label for="status" class="form-label">{{ $t('taskForm.statusLabel') }}</label>
-              <select class="form-select" id="status" v-model="form.status" required>
+              <select class="form-select" id="status" v-model="form.status" :disabled="isViewer" required>
                 <option value="todo">{{ $t('taskStatus.todo') }}</option>
                 <option value="in_progress">{{ $t('taskStatus.in_progress') }}</option>
                 <option value="done">{{ $t('taskStatus.done') }}</option>
@@ -73,7 +78,7 @@
             </div>
             <div class="col-md-6">
               <label for="priority" class="form-label">{{ $t('taskForm.priorityLabel') }}</label>
-              <select class="form-select" id="priority" v-model="form.priority">
+              <select class="form-select" id="priority" v-model="form.priority" :disabled="isViewer">
                 <option value="">{{ $t('taskForm.noPriority') }}</option>
                 <option v-for="priority in priorities" :key="priority.id" :value="priority.id">
                   {{ priority.name }}
@@ -92,7 +97,7 @@
                 class="form-select"
                 id="project"
                 v-model="form.project"
-                :disabled="!isEditing && !!form.parent_task"
+                :disabled="(!isEditing && !!form.parent_task) || isViewer"
               >
                 <option value="">{{ $t('taskForm.personalProject') }}</option>
                 <option v-for="project in projects" :key="project.id" :value="project.id">
@@ -107,7 +112,7 @@
             </div>
             <div class="col-md-6">
               <label for="category" class="form-label">{{ $t('taskForm.categoryLabel') }}</label>
-              <select class="form-select" id="category" v-model="form.category">
+              <select class="form-select" id="category" v-model="form.category" :disabled="isViewer">
                 <option value="">{{ $t('taskForm.noCategory') }}</option>
                 <option v-for="category in categories" :key="category.id" :value="category.id">
                   {{ category.icon || '📁' }} {{ category.name }}
@@ -121,11 +126,12 @@
                 class="form-control"
                 id="due_date"
                 v-model="form.due_date"
+                :disabled="isViewer"
               >
             </div>
             <div class="col-md-6">
               <label for="parent_task" class="form-label">{{ $t('taskForm.parentShortLabel') }}</label>
-              <select class="form-select" id="parent_task" v-model="form.parent_task">
+              <select class="form-select" id="parent_task" v-model="form.parent_task" :disabled="isViewer">
                 <option value="">{{ $t('taskForm.noParentTask') }}</option>
                 <option v-for="task in availableParentTasks" :key="task.id" :value="task.id">
                   {{ task.title }}
@@ -174,7 +180,7 @@
 
           <div class="form-section-title">{{ $t('taskForm.activity') }}</div>
           <div class="form-check">
-            <input type="checkbox" class="form-check-input" id="is_active" v-model="form.is_active">
+            <input type="checkbox" class="form-check-input" id="is_active" v-model="form.is_active" :disabled="isViewer">
             <label class="form-check-label" for="is_active">{{ $t('taskForm.activeTask') }}</label>
           </div>
         </div>
@@ -182,7 +188,7 @@
 
       <div class="card form-actions">
         <div class="card-body action-bar">
-          <button type="submit" class="btn btn-primary" :disabled="loading">
+          <button type="submit" class="btn btn-primary" :disabled="loading || isViewer">
             <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
             <span>{{ isEditing ? $t('common.save') : $t('taskForm.create') }}</span>
           </button>
@@ -238,8 +244,11 @@ export default {
 
     const canManageCollaborators = computed(() => {
       if (!isEditing.value) return true
-      return taskAccessRole.value === 'owner'
+      // owner, collaborator, and editor can all manage task collaborators
+      return ['owner', 'collaborator', 'editor'].includes(taskAccessRole.value)
     })
+
+    const isViewer = computed(() => taskAccessRole.value === 'viewer')
 
     const allTasks = ref([])
     const availableParentTasks = computed(() => {
@@ -358,6 +367,10 @@ export default {
     }
 
     const handleSubmit = async () => {
+      if (isEditing.value && taskAccessRole.value === 'viewer') {
+        toast.error(t('taskForm.viewOnlyEdit'))
+        return
+      }
       try {
         loading.value = true
         const payload = {

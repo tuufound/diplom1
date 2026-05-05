@@ -59,6 +59,51 @@
       </article>
     </section>
 
+    <section class="charts-grid mb-4">
+      <div class="card report-card">
+        <div class="card-header"><h5 class="mb-0">{{ $t('reports.statusTitle') }}</h5></div>
+        <div class="card-body chart-body">
+          <div v-if="filteredTasks.length === 0" class="empty-state">{{ $t('reports.noTasksPeriod') }}</div>
+          <div v-else class="donut-wrap">
+            <Doughnut :data="statusChartData" :options="statusChartOptions" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card report-card">
+        <div class="card-header"><h5 class="mb-0">{{ $t('reports.timeByProject') }}</h5></div>
+        <div class="card-body chart-body">
+          <div v-if="timeByProjectData.labels.length === 0" class="empty-state">{{ $t('reports.noTimeData') }}</div>
+          <div v-else class="bar-wrap">
+            <Bar :data="timeByProjectData" :options="timeByProjectOptions" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="projectStats.length > 0" class="card report-card mb-4">
+      <div class="card-header"><h5 class="mb-0">{{ $t('reports.projectsStats') }}</h5></div>
+      <div class="card-body">
+        <div class="projects-stats-grid">
+          <article v-for="ps in projectStats" :key="ps.name" class="project-stat-card">
+            <div class="ps-header">
+              <h6 class="ps-name">{{ ps.name }}</h6>
+              <span class="ps-total-badge">{{ ps.total }}</span>
+            </div>
+            <div class="ps-bar">
+              <div class="ps-bar-fill ps-done" :style="{ width: `${ps.total ? Math.round(ps.done / ps.total * 100) : 0}%` }"></div>
+              <div class="ps-bar-fill ps-progress" :style="{ width: `${ps.total ? Math.round(ps.inProgress / ps.total * 100) : 0}%` }"></div>
+            </div>
+            <div class="ps-meta">
+              <span class="ps-stat"><i class="fas fa-check-circle me-1"></i>{{ ps.done }}</span>
+              <span class="ps-stat"><i class="fas fa-spinner me-1"></i>{{ ps.inProgress }}</span>
+              <span class="ps-stat"><i class="fas fa-clock me-1"></i>{{ ps.todo }}</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
     <section class="content-grid mb-4">
       <div class="card report-card">
         <div class="card-header"><h5 class="mb-0">{{ $t('reports.statusTitle') }}</h5></div>
@@ -124,13 +169,28 @@ import api from '@/utils/api'
 import { useToast } from 'vue-toastification'
 import { format, subDays, subMonths, subQuarters, subYears, parseISO, startOfDay } from 'date-fns'
 import jsPDF from 'jspdf'
+import { Doughnut, Bar } from 'vue-chartjs'
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  BarElement
+} from 'chart.js'
+
+ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement)
 
 export default {
   name: 'ReportPage',
+  components: { Doughnut, Bar },
   setup() {
     const { t, locale } = useI18n()
     const toast = useToast()
     const tasks = ref([])
+    const projects = ref([])
     const timeEntries = ref([])
     const report = ref({})
     const loading = ref(false)
@@ -153,8 +213,9 @@ export default {
     const fetchData = async () => {
       try {
         loading.value = true
-        const [tasksResponse, timeEntriesResponse, reportResponse] = await Promise.all([
+        const [tasksResponse, projectsResponse, timeEntriesResponse, reportResponse] = await Promise.all([
           api.getTasks(),
+          api.getProjects(),
           api.getTimeEntries(),
           api.getReports({
             start_date: startDate.value || undefined,
@@ -162,6 +223,7 @@ export default {
           })
         ])
         tasks.value = Array.isArray(tasksResponse.data) ? tasksResponse.data : []
+        projects.value = Array.isArray(projectsResponse.data) ? projectsResponse.data : []
         timeEntries.value = Array.isArray(timeEntriesResponse.data) ? timeEntriesResponse.data : []
         const rep = reportResponse.data
         report.value = rep && typeof rep === 'object' && !Array.isArray(rep) ? rep : {}
@@ -231,6 +293,105 @@ export default {
       const v = report.value?.avg_completion_seconds
       if (v == null) return t('common.noData')
       return formatSeconds(v)
+    })
+
+    // --- Charts ---
+    const statusChartData = computed(() => {
+      void locale.value
+      const summary = statusSummary.value
+      return {
+        labels: summary.map(s => s.label),
+        datasets: [{
+          data: summary.map(s => s.count),
+          backgroundColor: ['#c4d7f2', '#b0a1d8', '#a5ddc4', '#d0c0da'],
+          borderColor: ['#8faad4', '#9080b8', '#82c8a4', '#b0a0c0'],
+          borderWidth: 1.5,
+          hoverOffset: 6
+        }]
+      }
+    })
+
+    const statusChartOptions = computed(() => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 12 }, color: '#5f4d83', padding: 14 }
+        },
+        tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed} задач` } }
+      },
+      cutout: '62%'
+    }))
+
+    const timeByProjectData = computed(() => {
+      void locale.value
+      const projectMap = {}
+      for (const entry of timeEntries.value) {
+        const tid = typeof entry.task === 'object' && entry.task ? entry.task.id : entry.task
+        const task = tasks.value.find(t => t.id === tid)
+        const pid = task?.project?.id ?? 'personal'
+        const pname = task?.project?.name ?? t('tasksList.personal')
+        const secs = parseDuration(entry.duration)
+        if (!projectMap[pid]) projectMap[pid] = { name: pname, seconds: 0 }
+        projectMap[pid].seconds += secs
+      }
+      const entries = Object.values(projectMap).sort((a, b) => b.seconds - a.seconds).slice(0, 8)
+      return {
+        labels: entries.map(e => e.name),
+        datasets: [{
+          label: t('reports.timeSpent'),
+          data: entries.map(e => +(e.seconds / 3600).toFixed(2)),
+          backgroundColor: 'rgba(155, 123, 255, 0.45)',
+          borderColor: 'rgba(155, 123, 255, 0.85)',
+          borderWidth: 1.5,
+          borderRadius: 8,
+          hoverBackgroundColor: 'rgba(155, 123, 255, 0.7)'
+        }]
+      }
+    })
+
+    const timeByProjectOptions = computed(() => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ${ctx.parsed.y.toFixed(1)}ч`
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#65567d', font: { size: 11 } }, grid: { display: false } },
+        y: {
+          ticks: { color: '#65567d', font: { size: 11 }, callback: v => `${v}ч` },
+          grid: { color: 'rgba(224, 206, 232, 0.4)' },
+          beginAtZero: true
+        }
+      }
+    }))
+
+    const parseDuration = (d) => {
+      if (!d) return 0
+      const parts = String(d).split(':')
+      if (parts.length !== 3) return 0
+      return Number(parts[0]) * 3600 + Number(parts[1]) * 60 + Number(parts[2])
+    }
+
+    // --- Project stats ---
+    const projectStats = computed(() => {
+      const map = {}
+      for (const task of filteredTasks.value) {
+        const pid = task.project?.id ?? 'none'
+        const pname = task.project?.name ?? t('reports.noProject')
+        if (!map[pid]) map[pid] = { name: pname, total: 0, done: 0, inProgress: 0, todo: 0 }
+        map[pid].total++
+        if (task.status === 'done') map[pid].done++
+        else if (task.status === 'in_progress') map[pid].inProgress++
+        else if (task.status === 'todo') map[pid].todo++
+      }
+      return Object.values(map).sort((a, b) => b.total - a.total)
     })
 
     const getTaskTime = (task) => {
@@ -480,7 +641,14 @@ export default {
       statusBarClass,
       progressWidth,
       getTaskTime,
-      formatSeconds
+      formatSeconds,
+      // Charts
+      statusChartData,
+      statusChartOptions,
+      timeByProjectData,
+      timeByProjectOptions,
+      // Project stats
+      projectStats
     }
   }
 }
@@ -510,7 +678,7 @@ export default {
 .metric-card {
   border: 1px solid rgba(224, 206, 232, 0.84);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--card-bg);
   box-shadow: 0 10px 24px rgba(136, 110, 149, 0.14);
 }
 
@@ -522,7 +690,7 @@ export default {
 
 .period-tab {
   border: 1px solid rgba(216, 196, 226, 0.8);
-  background: #fff;
+  background: var(--surface-1);
   border-radius: 999px;
   color: #65567d;
   padding: 7px 12px;
@@ -585,6 +753,32 @@ export default {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
   gap: 12px;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.chart-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+}
+
+.donut-wrap,
+.bar-wrap {
+  width: 100%;
+  max-width: 320px;
+  height: 220px;
+  position: relative;
+}
+
+.bar-wrap {
+  max-width: 100%;
+  height: 240px;
 }
 
 .report-card .card-header {
@@ -657,7 +851,7 @@ export default {
 .task-card {
   border: 1px solid rgba(224, 209, 233, 0.88);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--glass-panel-bg);
   padding: 10px;
 }
 
@@ -718,6 +912,110 @@ export default {
 .fill-done { background: linear-gradient(90deg, #47bf86, #2f9f6a); }
 .fill-archived { background: linear-gradient(90deg, #7b8493, #636d7c); }
 
+/* Project Stats */
+.projects-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.project-stat-card {
+  border: 1px solid rgba(224, 209, 233, 0.88);
+  border-radius: 12px;
+  background: var(--glass-panel-bg);
+  padding: 12px;
+}
+
+/* Dark theme: отчёты рисовали белые карточки вручную */
+:global([data-theme="dark"]) .controls-card,
+:global([data-theme="dark"]) .report-card,
+:global([data-theme="dark"]) .metric-card {
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+:global([data-theme="dark"]) .metric-card span,
+:global([data-theme="dark"]) .top-time,
+:global([data-theme="dark"]) .status-row-head,
+:global([data-theme="dark"]) .meta-pill {
+  color: var(--text-muted);
+}
+
+:global([data-theme="dark"]) .metric-card strong,
+:global([data-theme="dark"]) .top-title,
+:global([data-theme="dark"]) .task-head h6,
+:global([data-theme="dark"]) .ps-name {
+  color: var(--text-primary);
+}
+
+:global([data-theme="dark"]) .period-tab {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+}
+
+.ps-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.ps-name {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #34466d;
+  font-weight: 600;
+}
+
+.ps-total-badge {
+  background: #efe7ff;
+  border: 1px solid #d4c1ff;
+  color: #6846a8;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.ps-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #ebeef3;
+  margin-bottom: 8px;
+}
+
+.ps-bar-fill {
+  height: 100%;
+}
+
+.ps-done { background: linear-gradient(90deg, #47bf86, #2f9f6a); }
+.ps-progress { background: linear-gradient(90deg, #4f89f0, #2f74e3); }
+
+.ps-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ps-stat {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #f3edf8;
+  color: #685a83;
+}
+
+.ps-stat .fa-check-circle { color: #2c8059; }
+.ps-stat .fa-spinner { color: #3657a4; }
+.ps-stat .fa-clock { color: #5f6676; }
+
 .empty-state {
   color: #7f6a8e;
   text-align: center;
@@ -735,6 +1033,7 @@ export default {
   }
 
   .metrics-grid,
+  .charts-grid,
   .content-grid,
   .task-grid,
   .custom-range {

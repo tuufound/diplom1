@@ -6,6 +6,7 @@ export default {
     projects: 'Projects',
     timer: 'Timer',
     reports: 'Reports',
+    invitations: 'Invitations',
     profile: 'Profile'
   },
   footer: {
@@ -36,6 +37,7 @@ export default {
     resetPassword: 'Reset password',
     backToLogin: 'Back to sign in',
     passwordsMismatch: 'Passwords do not match',
+    registerError: 'Registration failed',
     passwordUpdated: 'Password updated, you can sign in now',
     passwordUpdateFailed: 'Could not update password',
     hasAccount: 'Already have an account?',
@@ -83,7 +85,10 @@ export default {
     newTask: 'New task',
     searchPlaceholder: 'Search by title and description',
     statusFilterAria: 'Filter by status',
+    projectFilterAria: 'Filter by project',
     allStatuses: 'All statuses',
+    allProjects: 'All projects',
+    noProject: 'No project',
     allTasks: 'All tasks',
     collaborative: 'Shared',
     favorites: 'Favorites',
@@ -94,6 +99,9 @@ export default {
     favorite: 'Favorite',
     timer: 'Timer',
     subtask: 'Subtask',
+    viewList: 'List view',
+    viewByProject: 'By project',
+    groupPersonal: 'Personal',
     timerModalTitle: 'Timer',
     timerTaskLabel: 'Task:',
     limitMinutes: 'Time limit (minutes)',
@@ -244,6 +252,7 @@ export default {
     loginRequired: 'Enter user login',
     invited: 'Invited: {login}',
     added: 'Added: {name}',
+    inviteSent: 'Invitation sent: {login}',
     memberRemoved: 'Member removed',
     memberDeleteError: 'Could not remove member',
     addMemberError: 'Could not add member',
@@ -322,7 +331,10 @@ export default {
     pdfTitle: 'Task report',
     fmtHm: '{h}h {m}m',
     fmtM: '{m}m',
-    fmtS: '{s}s'
+    fmtS: '{s}s',
+    timeByProject: 'Time by project',
+    projectsStats: 'Project statistics',
+    noProject: 'No project'
   },
   profile: {
     title: 'Profile',

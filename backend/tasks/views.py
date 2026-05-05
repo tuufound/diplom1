@@ -15,6 +15,7 @@ from .models import (
     Category,
     Priority,
     Project,
+    ProjectInvitation,
     ProjectMembership,
     Task,
     TaskCollaborator,
@@ -24,6 +25,7 @@ from .models import (
 from .serializers import (
     CategorySerializer,
     PrioritySerializer,
+    ProjectInvitationSerializer,
     ProjectMembershipSerializer,
     ProjectSerializer,
     RegisterSerializer,
@@ -550,3 +552,76 @@ class ReportView(APIView):
                 "avg_completion_seconds": avg_completion_seconds,
             }
         )
+
+
+class ProjectInvitationCreateView(APIView):
+    """Владелец проекта отправляет приглашение пользователю."""
+
+    def post(self, request, project_id):
+        project = get_object_or_404(Project, id=project_id)
+        if project.owner_id != request.user.id:
+            raise PermissionDenied("Только владелец может приглашать участников.")
+
+        username = (request.data.get("username") or "").strip()
+        user_id = request.data.get("user_id")
+        role = request.data.get("role", ProjectMembership.ROLE_VIEWER)
+
+        if username:
+            try:
+                invitee = User.objects.get(username__iexact=username)
+            except User.DoesNotExist:
+                return Response({"username": ["Пользователь не найден."]}, status=status.HTTP_400_BAD_REQUEST)
+        elif user_id:
+            try:
+                invitee = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response({"user_id": ["Пользователь не найден."]}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"username": ["Укажите логин или user_id."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        if invitee.id == request.user.id:
+            return Response({"username": ["Нельзя пригласить себя."]}, status=status.HTTP_400_BAD_REQUEST)
+        if ProjectMembership.objects.filter(project=project, user=invitee).exists():
+            return Response({"username": ["Пользователь уже в команде."]}, status=status.HTTP_400_BAD_REQUEST)
+        if ProjectInvitation.objects.filter(project=project, invitee=invitee, status=ProjectInvitation.STATUS_PENDING).exists():
+            return Response({"username": ["Приглашение уже отправлено."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        invitation = ProjectInvitation.objects.create(
+            project=project, inviter=request.user, invitee=invitee, role=role
+        )
+        return Response(ProjectInvitationSerializer(invitation).data, status=status.HTTP_201_CREATED)
+
+
+class ProjectInvitationListView(APIView):
+    """Список входящих приглашений текущего пользователя."""
+
+    def get(self, request):
+        invitations = ProjectInvitation.objects.filter(
+            invitee=request.user, status=ProjectInvitation.STATUS_PENDING
+        ).select_related("project", "inviter")
+        return Response(ProjectInvitationSerializer(invitations, many=True).data)
+
+
+class ProjectInvitationRespondView(APIView):
+    """Принять или отклонить приглашение."""
+
+    def post(self, request, pk):
+        invitation = get_object_or_404(ProjectInvitation, pk=pk, invitee=request.user)
+        if invitation.status != ProjectInvitation.STATUS_PENDING:
+            return Response({"detail": "Приглашение уже обработано."}, status=status.HTTP_400_BAD_REQUEST)
+
+        action = request.data.get("action")
+        if action == "accept":
+            ProjectMembership.objects.get_or_create(
+                project=invitation.project,
+                user=request.user,
+                defaults={"role": invitation.role},
+            )
+            invitation.status = ProjectInvitation.STATUS_ACCEPTED
+        elif action == "decline":
+            invitation.status = ProjectInvitation.STATUS_DECLINED
+        else:
+            return Response({"detail": "action должен быть 'accept' или 'decline'."}, status=status.HTTP_400_BAD_REQUEST)
+
+        invitation.save(update_fields=["status"])
+        return Response(ProjectInvitationSerializer(invitation).data)

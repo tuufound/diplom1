@@ -15,33 +15,124 @@
 
       <div class="tasks-toolbar card">
         <div class="card-body">
-          <div class="toolbar-row">
-            <div class="search">
+          <!-- Primary row: search + quick scope + new task -->
+          <div class="toolbar-primary">
+            <div class="search-box">
               <i class="fas fa-search"></i>
               <input v-model="query" class="form-control" type="text" :placeholder="$t('tasksList.searchPlaceholder')">
+              <button v-if="query" class="search-clear-btn" type="button" @click="query = ''" title="Clear search">
+                <i class="fas fa-times"></i>
+              </button>
             </div>
-            <div class="status-filters scope-filters">
-              <button type="button" class="filter-pill" :class="{ active: taskScope === 'all' }" @click="setTaskScope('all')">{{ $t('tasksList.allTasks') }}</button>
-              <button type="button" class="filter-pill" :class="{ active: taskScope === 'collaborative' }" @click="setTaskScope('collaborative')">{{ $t('tasksList.collaborative') }}</button>
-              <button type="button" class="filter-pill" :class="{ active: taskScope === 'favorites' }" @click="setTaskScope('favorites')"><i class="fas fa-star me-1"></i>{{ $t('tasksList.favorites') }}</button>
-              <select
-                id="taskStatusFilter"
-                v-model="statusFilter"
-                class="form-select status-filter-select"
-                :aria-label="$t('tasksList.statusFilterAria')"
+            <div class="scope-pills">
+              <button type="button" class="scope-pill" :class="{ active: taskScope === 'all' }" @click="setTaskScope('all')">
+                <i class="fas fa-layer-group me-1"></i>{{ $t('tasksList.allTasks') }}
+              </button>
+              <button type="button" class="scope-pill" :class="{ active: taskScope === 'collaborative' }" @click="setTaskScope('collaborative')">
+                <i class="fas fa-users me-1"></i>{{ $t('tasksList.collaborative') }}
+              </button>
+              <button type="button" class="scope-pill" :class="{ active: taskScope === 'favorites' }" @click="setTaskScope('favorites')">
+                <i class="fas fa-star me-1"></i>{{ $t('tasksList.favorites') }}
+              </button>
+            </div>
+            <div class="view-toggle">
+              <button
+                type="button"
+                class="view-btn"
+                :class="{ active: groupMode === 'flat' }"
+                @click="groupMode = 'flat'"
+                :title="$t('tasksList.viewList')"
               >
-                <option value="all">{{ $t('tasksList.allStatuses') }}</option>
-                <option value="todo">{{ $t('taskStatus.todo') }}</option>
-                <option value="in_progress">{{ $t('taskStatus.in_progress') }}</option>
-                <option value="done">{{ $t('taskStatus.done') }}</option>
-                <option value="archived">{{ $t('taskStatus.archived') }}</option>
-              </select>
+                <i class="fas fa-list"></i>
+              </button>
+              <button
+                type="button"
+                class="view-btn"
+                :class="{ active: groupMode === 'project' }"
+                @click="groupMode = 'project'"
+                :title="$t('tasksList.viewByProject')"
+              >
+                <i class="fas fa-layer-group"></i>
+              </button>
+            </div>
+            <router-link to="/tasks/create" class="btn btn-primary btn-new-task">
+              <i class="fas fa-plus me-1"></i>{{ $t('tasksList.newTask') }}
+            </router-link>
+          </div>
+
+          <!-- Filter row: status + project quick chips -->
+          <div class="toolbar-filters-row">
+            <div class="filter-group">
+              <label class="filter-label"><i class="fas fa-filter me-1"></i>Статус:</label>
+              <div class="status-quick-chips">
+                <button
+                  v-for="s in quickStatusOptions"
+                  :key="s.value"
+                  class="quick-chip"
+                  :class="[getQuickChipClass(s.value), { active: statusFilter === s.value }]"
+                  @click="toggleStatusFilter(s.value)"
+                >
+                  <i :class="s.icon"></i>{{ s.label }}
+                  <span v-if="getStatusCount(s.value) !== null" class="chip-count">{{ getStatusCount(s.value) }}</span>
+                </button>
+              </div>
+            </div>
+            <div v-if="hasActiveFilters" class="clear-filters-btn" @click="clearAllFilters" role="button" tabindex="0">
+              <i class="fas fa-times-circle me-1"></i>Сбросить фильтры
             </div>
           </div>
+
+          <!-- Active filter chips bar -->
+          <div v-if="hasActiveFilters" class="active-filters-bar">
+            <span class="active-filters-label"><i class="fas fa-tag me-1"></i>Фильтры:</span>
+            <span v-if="statusFilter !== 'all'" class="active-chip">
+              <i class="fas fa-circle status-dot" :class="'dot-' + statusFilter"></i>
+              {{ getStatusText(statusFilter) }}
+              <button type="button" class="active-chip-remove" @click="statusFilter = 'all'"><i class="fas fa-times"></i></button>
+            </span>
+            <span v-if="projectFilter !== 'all'" class="active-chip">
+              <i class="fas fa-folder-open me-1"></i>{{ projectFilter === 'none' ? $t('tasksList.noProject') : getProjectName(projectFilter) }}
+              <button type="button" class="active-chip-remove" @click="projectFilter = 'all'"><i class="fas fa-times"></i></button>
+            </span>
+          </div>
+
+          <!-- Advanced filters toggle -->
+          <div class="advanced-toggle-row">
+            <button class="advanced-toggle-btn" type="button" :class="{ active: showAdvancedFilters }" @click="showAdvancedFilters = !showAdvancedFilters">
+              <i class="fas fa-sliders-h me-1"></i>Все фильтры
+              <i class="fas fa-chevron-down ms-auto" :class="{ 'rotate-180': showAdvancedFilters }"></i>
+            </button>
+          </div>
+
+          <!-- Advanced filters panel -->
+          <div v-if="showAdvancedFilters" class="advanced-filters-panel">
+            <div class="advanced-grid">
+              <div class="adv-filter-group">
+                <label class="adv-label">Проект</label>
+                <select v-model="projectFilter" class="form-select">
+                  <option value="all">{{ $t('tasksList.allProjects') }}</option>
+                  <option value="none">{{ $t('tasksList.noProject') }}</option>
+                  <option v-for="proj in projects" :key="proj.id" :value="proj.id">{{ proj.name }}</option>
+                </select>
+              </div>
+              <div class="adv-filter-group">
+                <label class="adv-label">Статус (полный)</label>
+                <select v-model="statusFilter" class="form-select">
+                  <option value="all">{{ $t('tasksList.allStatuses') }}</option>
+                  <option value="todo">{{ $t('taskStatus.todo') }}</option>
+                  <option value="in_progress">{{ $t('taskStatus.in_progress') }}</option>
+                  <option value="done">{{ $t('taskStatus.done') }}</option>
+                  <option value="archived">{{ $t('taskStatus.archived') }}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPIs -->
           <div class="kpis">
-            <span class="kpi">{{ $t('tasksList.kpiActive') }} <strong>{{ activeTasksCount }}</strong></span>
-            <span class="kpi">{{ $t('tasksList.kpiToday') }} <strong>{{ todayTasksCount }}</strong></span>
-            <span class="kpi">{{ $t('tasksList.kpiOverdue') }} <strong>{{ overdueTasksCount }}</strong></span>
+            <span class="kpi"><i class="fas fa-bolt me-1"></i>{{ $t('tasksList.kpiActive') }} <strong>{{ activeTasksCount }}</strong></span>
+            <span class="kpi"><i class="fas fa-calendar-day me-1"></i>{{ $t('tasksList.kpiToday') }} <strong>{{ todayTasksCount }}</strong></span>
+            <span class="kpi kpi-overdue"><i class="fas fa-exclamation-triangle me-1"></i>{{ $t('tasksList.kpiOverdue') }} <strong>{{ overdueTasksCount }}</strong></span>
           </div>
         </div>
       </div>
@@ -54,8 +145,10 @@
       </div>
 
       <div v-else class="task-rows">
-        <template v-for="block in groupedFilteredRows" :key="blockKey(block)">
-          <div v-if="block.kind === 'block'" class="task-block">
+        <!-- Flat grouped view (subtask blocks) -->
+        <template v-if="groupMode === 'flat'">
+          <template v-for="block in groupedFilteredRows" :key="blockKey(block)">
+            <div v-if="block.kind === 'block'" class="task-block">
             <article
               v-for="item in [block.parentItem]"
               :key="'p-' + item.task.id"
@@ -220,6 +313,112 @@
             </div>
           </div>
         </template>
+        </template>
+
+        <!-- Project-grouped view -->
+        <template v-if="groupMode === 'project'">
+          <div
+            v-for="group in groupedByProjectRows"
+            :key="group.groupKey"
+            class="project-group"
+          >
+            <!-- Project group header -->
+            <button
+              class="project-group-header"
+              type="button"
+              @click="toggleProject(group.projectId)"
+            >
+              <i class="fas fa-chevron-right group-chevron" :class="{ 'is-open': isProjectExpanded(group.projectId) }"></i>
+              <i class="fas fa-folder-open group-icon"></i>
+              <span class="group-name">{{ group.projectName }}</span>
+              <span class="group-count">{{ group.tasks.length }}</span>
+            </button>
+
+            <!-- Project group tasks -->
+            <div
+              class="project-tasks-panel"
+              :class="{ 'is-open': isProjectExpanded(group.projectId) }"
+            >
+              <div class="project-tasks-inner">
+                <template v-for="item in group.tasks" :key="'g-' + item.task.id">
+                  <article
+                    class="task-row"
+                    :class="getRowClass(item.task)"
+                    @click="goToTaskDetail(item.task.id)"
+                  >
+                    <div class="task-main">
+                      <div class="title-row">
+                        <button
+                          v-if="hasSubtasks(item.task.id)"
+                          class="collapse-btn"
+                          type="button"
+                          :aria-expanded="isExpanded(item.task.id)"
+                          @click.stop="toggleSubtasks(item.task.id)"
+                        >
+                          <i class="fas fa-chevron-right collapse-chevron" :class="{ 'is-open': isExpanded(item.task.id) }"></i>
+                        </button>
+                        <span v-else class="collapse-placeholder"></span>
+                        <h6 class="task-title">{{ item.task.title }}</h6>
+                      </div>
+                      <p v-if="item.task.description" class="task-sub">{{ truncateText(item.task.description, 110) }}</p>
+                      <div class="chips">
+                        <span class="chip" :class="getStatusChipClass(item.task.status)">{{ getStatusText(item.task.status) }}</span>
+                        <span class="chip muted">{{ formatDate(item.task.created_at) }}</span>
+                        <span v-if="item.task.category" class="chip" :class="getCategoryChipClass(item.task.category?.id)">
+                          <span class="me-1">{{ item.task.category.icon || '📁' }}</span>{{ item.task.category.name }}
+                        </span>
+                        <span v-if="item.task.priority" class="chip" :class="getPriorityChipClass(item.task.priority)">{{ item.task.priority.name }}</span>
+                        <span v-if="countdownLabelForTask(item.task.id)" class="chip chip-timer-countdown">
+                          <i class="fas fa-bell me-1"></i>{{ $t('tasksList.countdownBell') }} {{ countdownLabelForTask(item.task.id) }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="task-actions">
+                      <button
+                        class="icon-btn star-btn"
+                        :class="{ active: item.task.is_favorited }"
+                        type="button"
+                        @click.stop="toggleFavorite(item.task)"
+                        :title="$t('tasksList.favorite')"
+                      >
+                        <i class="fas fa-star"></i>
+                      </button>
+                      <button class="icon-btn" @click.stop="toggleTimeTracking(item.task)" :disabled="!item.task.can_edit" :title="$t('tasksList.timer')">
+                        <i class="fas" :class="getTimeTrackingIcon(item.task)"></i>
+                      </button>
+                      <button class="icon-btn" @click.stop="editTask(item.task.id)" :disabled="!item.task.can_edit" :title="$t('common.edit')">
+                        <i class="fas fa-pen"></i>
+                      </button>
+                      <button class="icon-btn danger" @click.stop="deleteTask(item.task.id)" :disabled="!item.task.can_delete" :title="$t('common.delete')">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                      <router-link class="icon-btn" :to="`/tasks/create?parent=${item.task.id}`" :title="$t('tasksList.subtask')">
+                        <i class="fas fa-folder"></i>
+                      </router-link>
+                    </div>
+                  </article>
+
+                  <!-- Subtasks panel for project-group view -->
+                  <div
+                    v-if="hasSubtasks(item.task.id)"
+                    class="subtask-panel"
+                    :class="{ 'subtask-panel--open': isExpanded(item.task.id) }"
+                    :aria-hidden="!isExpanded(item.task.id)"
+                  >
+                    <div class="subtask-panel-inner">
+                      <TaskListSubtaskNode
+                        v-for="st in filteredSubtasksFor(item.task.id)"
+                        :key="st.id"
+                        :task="st"
+                        :depth="1"
+                      />
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
 
       <div v-if="timerModalOpen" class="timer-modal-backdrop" @click.self="timerModalOpen = false">
@@ -291,6 +490,7 @@ export default {
     const tasks = ref([])
     const categories = ref([])
     const priorities = ref([])
+    const projects = ref([])
     const timeEntries = ref([])
     const loading = ref(false)
     const currentDate = ref(new Date())
@@ -304,8 +504,11 @@ export default {
       t('tasksList.wd6')
     ])
     const expandedParents = ref({})
+    const expandedProjects = ref({})
+    const groupMode = ref('flat') // 'flat' | 'project'
     const query = ref('')
     const statusFilter = ref('all')
+    const projectFilter = ref('all')
     const taskScope = ref('all')
 
     const timerModalOpen = ref(false)
@@ -313,6 +516,7 @@ export default {
     const timerModalMinutes = ref(25)
     const timerModalSound = ref(true)
     const timerModalAutoStop = ref(false)
+    const showAdvancedFilters = ref(false)
 
     const fetchTasks = async () => {
       try {
@@ -345,6 +549,15 @@ export default {
         priorities.value = response.data
       } catch (error) {
         console.error('Error fetching priorities:', error)
+      }
+    }
+
+    const fetchProjects = async () => {
+      try {
+        const response = await api.getProjects()
+        projects.value = response.data
+      } catch (error) {
+        console.error('Error fetching projects:', error)
       }
     }
 
@@ -388,6 +601,10 @@ export default {
       return visibleTasks.value.filter(item => {
         const task = item.task
         if (statusFilter.value !== 'all' && task.status !== statusFilter.value) return false
+        if (projectFilter.value !== 'all') {
+          if (projectFilter.value === 'none' && task.project) return false
+          if (projectFilter.value !== 'none' && task.project?.id !== projectFilter.value) return false
+        }
         if (!q) return true
         const hay = `${task.title || ''} ${task.description || ''}`.toLowerCase()
         return hay.includes(q)
@@ -430,6 +647,51 @@ export default {
 
     const blockKey = (block) =>
       block.kind === 'block' ? `b-${block.parentItem.task.id}` : `o-${block.row.task.id}`
+
+    const groupedByProjectRows = computed(() => {
+      const rows = visibleTasksFiltered.value.filter(item => !item.isChild)
+      const projectsMap = {}
+      const noProjectRows = []
+
+      for (const item of rows) {
+        if (item.task.project) {
+          const pid = item.task.project.id
+          if (!projectsMap[pid]) {
+            projectsMap[pid] = {
+              projectId: pid,
+              project: item.task.project,
+              tasks: []
+            }
+          }
+          projectsMap[pid].tasks.push(item)
+        } else {
+          noProjectRows.push(item)
+        }
+      }
+
+      const result = []
+      // Personal tasks first
+      if (noProjectRows.length > 0) {
+        result.push({ kind: 'project-group', groupKey: 'personal', projectName: t('tasksList.groupPersonal'), projectId: null, tasks: noProjectRows })
+      }
+      // Then project groups sorted alphabetically
+      const sortedProjects = Object.values(projectsMap).sort((a, b) =>
+        (a.project.name || '').localeCompare(b.project.name || '')
+      )
+      for (const group of sortedProjects) {
+        result.push({ kind: 'project-group', groupKey: `proj-${group.projectId}`, projectName: group.project.name, projectId: group.projectId, tasks: group.tasks })
+      }
+      return result
+    })
+
+    const isProjectExpanded = (projectId) => !!expandedProjects.value[projectId]
+    const toggleProject = (projectId) => {
+      expandedProjects.value = {
+        ...expandedProjects.value,
+        [projectId]: !expandedProjects.value[projectId]
+      }
+    }
+
     const monthLabel = computed(() => format(currentDate.value, 'LLLL yyyy', { locale: dateLocale.value }))
     const calendarDays = computed(() => {
       const startMonth = startOfMonth(currentDate.value)
@@ -680,6 +942,44 @@ export default {
       }
     }
 
+    const quickStatusOptions = [
+      { value: 'todo', label: t('taskStatus.todo'), icon: 'fas fa-clock' },
+      { value: 'in_progress', label: t('taskStatus.in_progress'), icon: 'fas fa-spinner' },
+      { value: 'done', label: t('taskStatus.done'), icon: 'fas fa-check-circle' },
+    ]
+
+    const getQuickChipClass = (status) => {
+      const map = {
+        todo: 'quick-chip-todo',
+        in_progress: 'quick-chip-progress',
+        done: 'quick-chip-done',
+      }
+      return map[status] || ''
+    }
+
+    const getStatusCount = (status) => {
+      return tasks.value.filter(t => t.status === status).length || null
+    }
+
+    const toggleStatusFilter = (status) => {
+      statusFilter.value = statusFilter.value === status ? 'all' : status
+    }
+
+    const hasActiveFilters = computed(() =>
+      statusFilter.value !== 'all' || projectFilter.value !== 'all'
+    )
+
+    const clearAllFilters = () => {
+      statusFilter.value = 'all'
+      projectFilter.value = 'all'
+      query.value = ''
+    }
+
+    const getProjectName = (projectId) => {
+      const proj = projects.value.find(p => p.id === projectId)
+      return proj ? proj.name : ''
+    }
+
     const isCurrentMonth = (day) => isSameMonth(day, currentDate.value)
     const isToday = (day) => isSameDay(day, new Date())
 
@@ -687,6 +987,7 @@ export default {
       fetchTasks()
       fetchCategories()
       fetchPriorities()
+      fetchProjects()
       fetchTimeEntries()
     })
 
@@ -716,12 +1017,14 @@ export default {
       tasks,
       categories,
       priorities,
+      projects,
       timeEntries,
       loading,
       filteredTasks,
       visibleTasks,
       visibleTasksFiltered,
       groupedFilteredRows,
+      groupMode,
       filteredSubtasksFor,
       blockKey,
       monthLabel,
@@ -732,6 +1035,8 @@ export default {
       overdueTasksCount,
       query,
       statusFilter,
+      projectFilter,
+      projectFilterValue: projectFilter,
       taskScope,
       setTaskScope,
       toggleFavorite,
@@ -762,7 +1067,18 @@ export default {
       toggleSubtasks,
       isCurrentMonth,
       isToday,
-      format
+      format,
+      showAdvancedFilters,
+      quickStatusOptions,
+      getQuickChipClass,
+      getStatusCount,
+      toggleStatusFilter,
+      hasActiveFilters,
+      clearAllFilters,
+      getProjectName,
+      groupedByProjectRows,
+      isProjectExpanded,
+      toggleProject
     }
   }
 }
@@ -791,21 +1107,22 @@ export default {
   padding: 14px;
 }
 
-.toolbar-row {
+/* Primary toolbar row */
+.toolbar-primary {
   display: flex;
   gap: 10px;
   align-items: center;
-  justify-content: space-between;
   flex-wrap: wrap;
 }
 
-.search {
+/* Search box */
+.search-box {
   flex: 1;
-  min-width: 240px;
+  min-width: 220px;
   position: relative;
 }
 
-.search i {
+.search-box i.fa-search {
   position: absolute;
   left: 12px;
   top: 50%;
@@ -813,50 +1130,312 @@ export default {
   color: #8b7697;
 }
 
-.search .form-control {
+.search-box .form-control {
   padding-left: 36px;
+  padding-right: 36px;
+  outline: none;
 }
 
-.status-filters {
+.search-box .form-control:focus {
+  border-color: rgba(176, 131, 200, 0.7);
+  box-shadow: 0 0 0 3px rgba(176, 131, 200, 0.18);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #8b7697;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.search-clear-btn:hover { color: #65567d; }
+
+/* Scope pills */
+.scope-pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
-.filter-pill {
+.scope-pill {
   border: 1px solid rgba(216, 196, 226, 0.8);
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999px;
   color: #65567d;
-  padding: 7px 12px;
+  padding: 7px 14px;
   font-size: 0.82rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.18s ease;
+  outline: none;
 }
 
-.filter-pill.active {
-  background: linear-gradient(135deg, rgba(246, 232, 245, 0.96), rgba(241, 226, 247, 0.96));
-  color: #3a4c78;
+.scope-pill:focus-visible {
+  box-shadow: 0 0 0 2px rgba(176, 131, 200, 0.5);
+}
+
+.scope-pill:hover {
+  background: rgba(246, 232, 245, 0.6);
   border-color: rgba(194, 170, 211, 0.9);
 }
 
-.status-filter-select {
-  flex-shrink: 0;
-  min-width: 188px;
-  max-width: 100%;
-  border: 1px solid rgba(216, 196, 226, 0.8);
-  border-radius: 999px;
-  color: #65567d;
-  background-color: rgba(255, 255, 255, 0.92);
-  font-size: 0.82rem;
-  line-height: 1.25;
-  padding: 7px 2.25rem 7px 12px;
-  height: auto;
-  min-height: 0;
-  box-shadow: none;
+.scope-pill.active {
+  background: linear-gradient(135deg, rgba(246, 232, 245, 0.96), rgba(241, 226, 247, 0.96));
+  color: #3a4c78;
+  border-color: rgba(194, 170, 211, 0.9);
+  box-shadow: 0 2px 8px rgba(176, 131, 200, 0.2);
 }
 
-.status-filter-select:focus {
+/* New task button */
+.btn-new-task {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 7px 18px;
+  font-size: 0.85rem;
+  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.25);
+}
+
+/* Filter row */
+.toolbar-filters-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(224, 206, 232, 0.55);
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-label {
+  font-size: 0.78rem;
+  color: #7a6991;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Quick status chips */
+.status-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.quick-chip {
+  border: 1px solid rgba(216, 196, 226, 0.8);
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  color: #65567d;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.18s ease;
+  line-height: 1.4;
+  outline: none;
+}
+
+.quick-chip:focus-visible {
+  box-shadow: 0 0 0 2px rgba(176, 131, 200, 0.5);
+}
+
+.quick-chip i { font-size: 0.75rem; }
+
+.quick-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(136, 110, 149, 0.15);
+}
+
+.quick-chip.active {
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.quick-chip-todo.active { background: #ffe8f6; color: #9f3f7d; border-color: #ffc4e6; }
+.quick-chip-progress.active { background: #efe7ff; color: #6846a8; border-color: #d4c1ff; }
+.quick-chip-done.active { background: #e9f9ef; color: #2c8059; border-color: #bcebcf; }
+
+.chip-count {
+  background: rgba(0,0,0,0.08);
+  border-radius: 999px;
+  padding: 0 5px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.quick-chip.active .chip-count { background: rgba(0,0,0,0.1); }
+
+/* Clear filters button */
+.clear-filters-btn {
+  font-size: 0.78rem;
+  color: #a33745;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 184, 192, 0.7);
+  background: #fff0f0;
+  display: flex;
+  align-items: center;
+  transition: all 0.18s ease;
+}
+
+.clear-filters-btn:hover {
+  background: #ffe0e4;
+  border-color: rgba(255, 184, 192, 0.9);
+}
+
+.clear-filters-btn:focus-visible {
+  outline: 2px solid rgba(255, 184, 192, 0.8);
+  outline-offset: 2px;
+}
+
+/* Active filters bar */
+.active-filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.active-filters-label {
+  font-size: 0.78rem;
+  color: #7a6991;
+  font-weight: 600;
+}
+
+.active-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(135deg, rgba(246, 232, 245, 0.96), rgba(241, 226, 247, 0.96));
+  border: 1px solid rgba(194, 170, 211, 0.7);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  color: #3a4c78;
+}
+
+.status-dot {
+  font-size: 0.5rem;
+}
+.dot-todo { color: #ff6db8; }
+.dot-in_progress { color: #9b7bff; }
+.dot-done { color: #63c799; }
+
+.active-chip-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #7a6991;
+  font-size: 0.7rem;
+  padding: 0 1px;
+  line-height: 1;
+}
+
+.active-chip-remove:hover { color: #a33745; }
+
+.active-chip-remove:focus-visible {
+  outline: 2px solid rgba(176, 131, 200, 0.5);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Advanced toggle */
+.advanced-toggle-row {
+  margin-top: 8px;
+}
+
+.advanced-toggle-btn {
+  background: none;
+  border: none;
+  color: #7a6991;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.18s ease;
+}
+
+.advanced-toggle-btn:hover,
+.advanced-toggle-btn.active { color: #65567d; }
+
+.advanced-toggle-btn:focus-visible {
+  outline: 2px solid rgba(176, 131, 200, 0.5);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.advanced-toggle-btn i.fa-chevron-down {
+  transition: transform 0.25s ease;
+}
+
+.advanced-toggle-btn i.fa-chevron-down.rotate-180 {
+  transform: rotate(180deg);
+}
+
+/* Advanced filters panel */
+.advanced-filters-panel {
+  margin-top: 10px;
+  padding: 12px;
+  background: rgba(248, 244, 252, 0.7);
+  border-radius: 12px;
+  border: 1px solid rgba(216, 196, 226, 0.55);
+}
+
+.advanced-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.adv-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.adv-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #7a6991;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.adv-filter-group .form-select {
+  border-radius: 10px;
+  font-size: 0.82rem;
+  padding: 6px 28px 6px 10px;
+  border-color: rgba(216, 196, 226, 0.8);
+  background-color: rgba(255, 255, 255, 0.92);
+  color: #65567d;
+  height: auto;
+  min-height: 0;
+}
+
+.adv-filter-group .form-select:focus {
   border-color: rgba(194, 170, 211, 0.95);
   box-shadow: 0 0 0 0.2rem rgba(176, 131, 200, 0.2);
+  outline: none;
   color: #3a4c78;
 }
 
@@ -869,9 +1448,12 @@ export default {
   font-size: 0.88rem;
 }
 
-.kpi strong {
-  color: #2f3f6d;
-}
+.kpi { display: flex; align-items: center; gap: 4px; }
+.kpi i { color: #9b7bff; font-size: 0.85rem; }
+.kpi strong { color: #2f3f6d; }
+.kpi-overdue { color: #b05c5c; }
+.kpi-overdue i { color: #ff6b6b; }
+.kpi-overdue strong { color: #a33737; }
 
 .task-rows {
   position: relative;
@@ -918,13 +1500,15 @@ export default {
   justify-content: space-between;
   gap: 12px;
   cursor: pointer;
-  transition: box-shadow 0.22s ease;
-  background: #ffffff;
-  backdrop-filter: none;
+  transition: box-shadow 0.22s ease, transform 0.22s ease, background 0.22s ease;
+  background: var(--card-bg);
+  backdrop-filter: blur(var(--blur-amount));
+  -webkit-backdrop-filter: blur(var(--blur-amount));
 }
 
 .tasks-page :deep(.task-row:hover) {
   box-shadow: 0 14px 28px rgba(136, 110, 149, 0.22);
+  transform: translateY(-4px);
 }
 
 .tasks-page :deep(.task-row:hover .task-actions) {
@@ -980,8 +1564,8 @@ export default {
 .tasks-page :deep(.chip) {
   font-size: 0.74rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(220, 206, 230, 0.85);
+  background: var(--surface-2);
+  border: 1px solid var(--glass-border);
   padding: 2px 8px;
   color: #5b4e7f;
 }
@@ -1078,6 +1662,134 @@ export default {
   color: #1d5a8a;
 }
 
+/* View toggle */
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.view-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(216, 196, 226, 0.8);
+  background: rgba(255, 255, 255, 0.92);
+  color: #8b7697;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  transition: all 0.18s ease;
+  outline: none;
+}
+
+.view-btn:focus-visible {
+  box-shadow: 0 0 0 2px rgba(176, 131, 200, 0.5);
+}
+
+.view-btn:hover {
+  background: rgba(246, 232, 245, 0.6);
+  border-color: rgba(194, 170, 211, 0.9);
+}
+
+.view-btn.active {
+  background: linear-gradient(135deg, rgba(246, 232, 245, 0.96), rgba(241, 226, 247, 0.96));
+  color: #3a4c78;
+  border-color: rgba(194, 170, 211, 0.9);
+  box-shadow: 0 2px 8px rgba(176, 131, 200, 0.2);
+}
+
+/* Project groups */
+.project-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
+.project-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(246, 232, 245, 0.88), rgba(241, 226, 247, 0.88));
+  border: 1px solid rgba(194, 170, 211, 0.7);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-size: 0.9rem;
+  color: #3a4c78;
+  font-weight: 600;
+  width: 100%;
+  text-align: left;
+  outline: none;
+}
+
+.project-group-header:focus-visible {
+  box-shadow: 0 0 0 2px rgba(176, 131, 200, 0.5);
+}
+
+.project-group-header:hover {
+  background: linear-gradient(135deg, rgba(246, 232, 245, 0.98), rgba(241, 226, 247, 0.98));
+  box-shadow: 0 2px 8px rgba(176, 131, 200, 0.18);
+}
+
+.group-chevron {
+  font-size: 0.7rem;
+  color: #9b7bff;
+  transition: transform 0.25s cubic-bezier(0.33, 1, 0.28, 1);
+  width: 14px;
+  text-align: center;
+}
+
+.group-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+.group-icon {
+  color: #9b7bff;
+  font-size: 0.85rem;
+}
+
+.group-name {
+  flex: 1;
+}
+
+.group-count {
+  background: rgba(155, 123, 255, 0.15);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  color: #6846a8;
+}
+
+/* Project tasks panel (collapsible) */
+.tasks-page :deep(.project-tasks-panel) {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s cubic-bezier(0.33, 1, 0.28, 1);
+}
+
+.tasks-page :deep(.project-tasks-panel.is-open) {
+  grid-template-rows: 1fr;
+}
+
+.tasks-page :deep(.project-tasks-inner) {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+/* Make project tasks slightly different from flat rows */
+.tasks-page :deep(.project-group .task-row) {
+  border-left-width: 3px;
+  margin-left: 8px;
+}
+
 .tasks-page :deep(.chip-coworkers) {
   background: rgba(232, 245, 255, 0.92);
   border-color: rgba(140, 190, 230, 0.65);
@@ -1110,12 +1822,6 @@ export default {
   border: 1px solid rgba(219, 199, 230, 0.85);
 }
 
-.scope-filters {
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px dashed rgba(224, 206, 232, 0.65);
-}
-
 .tasks-page :deep(.icon-btn.star-btn.active) {
   color: #c9a227;
   border-color: rgba(212, 175, 55, 0.75);
@@ -1123,30 +1829,80 @@ export default {
 }
 
 .tasks-page :deep(.task-actions) {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  opacity: 0.55;
-  transition: opacity 0.18s ease;
-}
-
-.tasks-page :deep(.task-row.is-child) {
   margin-left: 28px;
-  border-style: dashed;
-  background-image: linear-gradient(90deg, rgba(106, 137, 211, 0.12), transparent 35%);
+  border: none;
+  background: transparent;
 }
 
 .tasks-page :deep(.subtask-tree-node .task-row.is-child) {
   margin-left: calc(12px + var(--sub-depth, 1) * 16px);
+  border-left: 3px dashed rgba(176, 131, 200, 0.55);
 }
 
 .tasks-page :deep(.icon-btn) {
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  border: 1px solid rgba(216, 198, 229, 0.9);
-  background: #ffffff;
+  border: 1px solid var(--glass-border);
+  background: var(--surface-1);
   color: #5f4b84;
+  outline: none;
+}
+
+/* Dark theme overrides (эта страница задавала много "белого" вручную) */
+:global([data-theme="dark"]) .tasks-page :deep(.task-row) {
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+:global([data-theme="dark"]) .tasks-page :deep(.task-title) {
+  color: var(--text-primary);
+}
+
+:global([data-theme="dark"]) .tasks-page :deep(.task-sub) {
+  color: var(--text-muted);
+}
+
+:global([data-theme="dark"]) .tasks-page :deep(.row-todo) {
+  background:
+    radial-gradient(circle at 18% 16%, rgba(102, 126, 234, 0.18), transparent 46%),
+    linear-gradient(135deg, rgba(48, 48, 56, 0.92), rgba(30, 30, 36, 0.88));
+}
+
+:global([data-theme="dark"]) .tasks-page :deep(.row-progress) {
+  background:
+    radial-gradient(circle at 88% 10%, rgba(118, 75, 162, 0.18), transparent 52%),
+    linear-gradient(135deg, rgba(48, 48, 56, 0.92), rgba(30, 30, 36, 0.88));
+}
+
+:global([data-theme="dark"]) .tasks-page :deep(.row-done) {
+  background:
+    radial-gradient(circle at 26% 92%, rgba(99, 179, 237, 0.14), transparent 48%),
+    linear-gradient(135deg, rgba(48, 48, 56, 0.92), rgba(30, 30, 36, 0.88));
+}
+
+:global([data-theme="dark"]) .tasks-page :deep(.row-archived) {
+  background:
+    radial-gradient(circle at 60% 40%, rgba(120, 122, 130, 0.18), transparent 52%),
+    linear-gradient(135deg, rgba(48, 48, 56, 0.92), rgba(30, 30, 36, 0.88));
+}
+
+:global([data-theme="dark"]) .tasks-page :deep(.collapse-btn) {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(70, 70, 74, 0.5);
+  color: var(--text-secondary);
+}
+
+:global([data-theme="dark"]) .tasks-page :deep(.chip) {
+  color: var(--text-secondary);
+}
+
+:global([data-theme="dark"]) .tasks-page :deep(.icon-btn) {
+  color: var(--text-secondary);
+}
+
+.tasks-page :deep(.icon-btn:focus-visible) {
+  box-shadow: 0 0 0 2px rgba(176, 131, 200, 0.5);
 }
 
 .tasks-page :deep(.icon-btn.danger) {

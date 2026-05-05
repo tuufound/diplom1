@@ -14,6 +14,8 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = userData
     token.value = authToken
     localStorage.setItem('token', authToken)
+    // На всякий случай: "гостевой" аватар не должен тянуться в аккаунты
+    localStorage.removeItem('profile_photo_guest')
   }
 
   const clearAuth = () => {

@@ -746,10 +746,24 @@ export default {
       loadProfileData()
     })
 
+    // ВАЖНО: user может подгрузиться после монтирования (checkAuth).
+    // Не даём "guest" фото протечь в новый аккаунт.
+    watch(
+      user,
+      (next, prev) => {
+        const prevKey = prev?.id || prev?.username || 'guest'
+        const nextKey = next?.id || next?.username || 'guest'
+        if (prevKey !== nextKey) {
+          profilePhoto.value = ''
+        }
+        loadAvatar()
+      },
+      { immediate: true }
+    )
+
     onMounted(() => {
       loadProfileData()
       syncProfileForm()
-      loadAvatar()
     })
 
     return {
